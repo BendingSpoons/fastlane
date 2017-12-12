@@ -112,7 +112,7 @@ module Spaceship
       #    }
       #  ]
       def pricing_intervals
-        @pricing_intervals ||= raw_data["pricingIntervals"].map do |interval|
+        @pricing_intervals ||= (raw_data["pricingIntervals"] || []).map do |interval|
           {
             tier: interval["value"]["tierStem"].to_i,
             begin_date: interval["value"]["priceTierEffectiveDate"],
