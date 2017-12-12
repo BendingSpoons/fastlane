@@ -8,7 +8,7 @@ module Spaceship::TestFlight
     attr_accessor :description, :feedback_email, :whats_new
 
     def description
-      raw_data.first['description']
+      raw_data.first['description'] if raw_data.first != nil
     end
 
     def description=(value)
@@ -16,7 +16,7 @@ module Spaceship::TestFlight
     end
 
     def feedback_email
-      raw_data.first['feedbackEmail']
+      raw_data.first['feedbackEmail'] if raw_data.first != nil
     end
 
     def feedback_email=(value)
@@ -24,7 +24,7 @@ module Spaceship::TestFlight
     end
 
     def whats_new
-      raw_data.first['whatsNew']
+      raw_data.first['whatsNew'] if raw_data.first != nil
     end
 
     def whats_new=(value)
