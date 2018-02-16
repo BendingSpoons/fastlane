@@ -245,6 +245,41 @@ module Spaceship
         end
       end
 
+      def intro_offers=(value = [])
+        return [] unless raw_data["addOnType"] == Spaceship::Tunes::IAPType::RECURRING
+        new_intro_offers = []
+        value.each do |current_intro_offer|
+          new_intro_offers << {
+              "value" =>  {
+                  "country" =>  current_intro_offer[:country],
+                  "durationType" =>  current_intro_offer[:duration_type],
+                  "startDate" =>  current_intro_offer[:start_date],
+                  "endDate" =>  current_intro_offer[:end_date],
+                  "numOfPeriods" =>  current_intro_offer[:num_of_periods],
+                  "offerModeType" =>  current_intro_offer[:offer_mode_type],
+                  "tierStem" =>  current_intro_offer[:tier_stem]
+              }
+          }
+        end
+        @subscription_pricing.raw_data.set(['introOffers'], new_intro_offers)
+      end
+
+      def intro_offers
+        return [] unless raw_data["addOnType"] == Spaceship::Tunes::IAPType::RECURRING
+
+        @intro_offers ||= (@subscription_pricing.raw_data["introOffers"] || []).map do |intro_offer|
+          {
+              country: intro_offer["value"]["country"],
+              duration_type: intro_offer["value"]["durationType"],
+              start_date: intro_offer["value"]["startDate"],
+              end_date: intro_offer["value"]["endDate"],
+              num_of_periods: intro_offer["value"]["numOfPeriods"],
+              offer_mode_type: intro_offer["value"]["offerModeType"],
+              tier_stem: intro_offer["value"]["tierStem"]
+          }
+        end
+      end
+
       # @return (String) Human Readable type of the purchase
       def type
         Tunes::IAPType.get_from_string(raw_data["addOnType"])
