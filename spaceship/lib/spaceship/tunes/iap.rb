@@ -7,6 +7,9 @@ require 'spaceship/tunes/iap_family_list'
 require 'spaceship/tunes/iap_families'
 require 'spaceship/tunes/iap_family_details'
 require 'spaceship/tunes/iap_families'
+require 'spaceship/tunes/iap_subscription_pricing'
+require 'spaceship/tunes/iap_subscription_pricing_intro_offer_type'
+require 'spaceship/tunes/iap_subscription_pricing_intro_offer'
 require 'spaceship/tunes/iap_subscription_pricing_tier'
 
 module Spaceship
@@ -62,7 +65,8 @@ module Spaceship
                   pricing_intervals: nil,
                   family_id: nil,
                   subscription_free_trial: nil,
-                  subscription_duration: nil)
+                  subscription_duration: nil,
+                  intro_offers: nil)
 
         client.create_iap!(app_id: self.application.apple_id,
                            type: type,
@@ -84,10 +88,16 @@ module Spaceship
           # for 4 times until it is found. If it's not found after 4 tries, a PotentialServerError
           # exception is raised.
           product = find_product_with_retries(product_id, 4)
+
           transformed_pricing_intervals = transform_pricing_intervals(pricing_intervals)
           client.update_recurring_iap_pricing!(app_id: self.application.apple_id,
                                                purchase_id: product.purchase_id,
                                                pricing_intervals: transformed_pricing_intervals)
+
+          transformed_intro_offers = transform_intro_offers(intro_offers)
+          client.update_recurring_iap_pricing_intro_offers!(app_id: self.application.apple_id,
+                                                            purchase_id: product.purchase_id,
+                                                            intro_offers: transformed_intro_offers)
         end
       end
 
@@ -100,6 +110,24 @@ module Spaceship
               "priceTierEndDate" =>  interval[:end_date],
               "country" =>  interval[:country] || "WW",
               "grandfathered" =>  interval[:grandfathered]
+            }
+          }
+        end
+      end
+
+      def transform_intro_offers(intro_offers)
+        return [] unless intro_offers
+
+        intro_offers.map do |intro_offer|
+          {
+            "value" => {
+              "country" => intro_offer[:country],
+              "durationType" => intro_offer[:duration_type],
+              "startDate" => intro_offer[:start_date],
+              "endDate" => intro_offer[:end_date],
+              "numOfPeriods" => intro_offer[:num_of_periods],
+              "offerModeType" => intro_offer[:offer_mode_type],
+              "tierStem" => intro_offer[:tier_stem]
             }
           }
         end
