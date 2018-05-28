@@ -388,73 +388,17 @@ module Spaceship
       parse_response(r, 'data')
     end
 
-    def get_reviews(app_id, platform, storefront, version_id, upto_date = nil)
-      index = 0
+    def get_reviews(app_id, platform, storefront, version_id, page = 0, sort = 'REVIEW_SORT_ORDER_MOST_RECENT')
       per_page = 100 # apple default
-      all_reviews = []
+      index = page * per_page
+      rating_url = "ra/apps/#{app_id}/platforms/#{platform}/reviews?"
+      rating_url << "sort=#{sort}"
+      rating_url << "&index=#{index}"
+      rating_url << "&storefront=#{storefront}" unless storefront.empty?
+      rating_url << "&versionId=#{version_id}" unless version_id.empty?
 
-      upto_date = Time.parse(upto_date) unless upto_date.nil?
-
-      loop do
-        rating_url = "ra/apps/#{app_id}/platforms/#{platform}/reviews?"
-        rating_url << "sort=REVIEW_SORT_ORDER_MOST_RECENT"
-        rating_url << "&index=#{index}"
-        rating_url << "&storefront=#{storefront}" unless storefront.empty?
-        rating_url << "&versionId=#{version_id}" unless version_id.empty?
-
-        r = request(:get, rating_url)
-        all_reviews.concat(parse_response(r, 'data')['reviews'])
-
-        # The following lines throw errors when there are no reviews so exit out of the loop before them if the app has no reviews
-        break if all_reviews.count == 0
-
-        last_review_date = Time.at(all_reviews[-1]['value']['lastModified'] / 1000)
-
-        if upto_date && last_review_date < upto_date
-          all_reviews = all_reviews.select { |review| Time.at(review['value']['lastModified'] / 1000) > upto_date }
-          break
-        end
-
-        if all_reviews.count < parse_response(r, 'data')['reviewCount']
-          index += per_page
-        else
-          break
-        end
-      end
-
-      all_reviews
-    end
-
-    def create_developer_response!(app_id: nil, platform: "ios", review_id: nil, response: nil)
-      raise "app_id is required" unless app_id
-      raise "review_id is required" unless review_id
-      raise "response is required" unless response
-
-      data = {
-          responseText: response,
-          reviewId: review_id
-      }
-      request(:post) do |req|
-        req.url("ra/apps/#{app_id}/platforms/#{platform}/reviews/#{review_id}/responses")
-        req.body = data.to_json
-        req.headers['Content-Type'] = 'application/json'
-      end
-    end
-
-    def update_developer_response!(app_id: nil, platform: "ios", review_id: nil, response_id: nil, response: nil)
-      raise "app_id is required" unless app_id
-      raise "review_id is required" unless review_id
-      raise "response_id is required" unless response_id
-      raise "response is required" unless response
-
-      data = {
-          responseText: response
-      }
-      request(:put) do |req|
-        req.url("ra/apps/#{app_id}/platforms/#{platform}/reviews/#{review_id}/responses/#{response_id}")
-        req.body = data.to_json
-        req.headers['Content-Type'] = 'application/json'
-      end
+      r = request(:get, rating_url)
+      parse_response(r, 'data')['reviews']
     end
 
     def create_developer_response!(app_id: nil, platform: "ios", review_id: nil, response: nil)

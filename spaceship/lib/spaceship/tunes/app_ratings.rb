@@ -8,23 +8,26 @@ module Spaceship
       #   this version is for
       attr_accessor :application
 
-      # @return (Integer) total number of ratings recevied
+      # @return (Integer) total number of ratings received
       attr_accessor :rating_count
 
-      # @return (Integer) total number of one star ratings recevied
+      # @return (Integer) total number of one star ratings received
       attr_accessor :one_star_rating_count
 
-      # @return (Integer) total number of two star ratings recevied
+      # @return (Integer) total number of two star ratings received
       attr_accessor :two_star_rating_count
 
-      # @return (Integer) total number of three star ratings recevied
+      # @return (Integer) total number of three star ratings received
       attr_accessor :three_star_rating_count
 
-      # @return (Integer) total number of four star ratings recevied
+      # @return (Integer) total number of four star ratings received
       attr_accessor :four_star_rating_count
 
-      # @return (Integer) total number of five star ratings recevied
+      # @return (Integer) total number of five star ratings received
       attr_accessor :five_star_rating_count
+
+      # @return (Integer) how many reviews we received per page
+      attr_accessor :review_per_page
 
       attr_mapping({
         'reviewCount' => :review_count,
@@ -46,12 +49,17 @@ module Spaceship
       end
 
       # @return (Array) of Review Objects
-      def reviews(store_front = '', version_id = '', upto_date = nil)
-        raw_reviews = client.get_reviews(application.apple_id, application.platform, store_front, version_id, upto_date)
+      def reviews(store_front = '', version_id = '', page = 0, sort = 'REVIEW_SORT_ORDER_MOST_RECENT')
+        raw_reviews = client.get_reviews(application.apple_id, application.platform, store_front, version_id, page, sort, reviews_per_page)
         raw_reviews.map do |review|
           review["value"]["application"] = self.application
           AppReview.factory(review["value"])
         end
+      end
+
+      # Apple default
+      def reviews_per_page
+        100
       end
     end
 
