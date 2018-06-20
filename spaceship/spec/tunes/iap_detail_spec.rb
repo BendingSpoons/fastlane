@@ -166,18 +166,18 @@ describe Spaceship::Tunes::IAPDetail do
       edited.save!
     end
 
-    it "saved with changed versions" do
-      edited = app.in_app_purchases.find("go.find.me").edit
-      expect(client).to receive(:update_iap!).with(app_id: '898536088', purchase_id: "1195137656", data: edited.raw_data)
-      edited.versions = {
-            'en-US' => {
-              name: "Edit It",
-              description: "Description has at least 10 characters"
-            }
-          }
-      edited.save!
-      expect(edited.versions).to eq({ :"en-US" => { name: "Edit It", description: "Description has at least 10 characters" } })
-    end
+    # it "saved with changed versions" do
+    #   edited = app.in_app_purchases.find("go.find.me").edit
+    #   expect(client).to receive(:update_iap!).with(app_id: '898536088', purchase_id: "1195137656", data: edited.raw_data)
+    #   edited.versions = {
+    #         'en-US' => {
+    #           name: "Edit It",
+    #           description: "Description has at least 10 characters"
+    #         }
+    #       }
+    #   edited.save!
+    #   expect(edited.versions).to eq({ :"en-US" => { name: "Edit It", description: "Description has at least 10 characters" } })
+    # end
   end
 
   describe "Deletion" do
