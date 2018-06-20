@@ -57,25 +57,29 @@ module Spaceship
         end
       end
 
-      # @return (Hash) Hash of languages
-      # @example: {
-      #   'de-DE': {
-      #     name: "Name shown in AppStore",
-      #     description: "Description of the In app Purchase"
-      #
-      #   }
-      # }
       def versions
-        parsed_versions = {}
-        raw_versions = raw_data["versions"].first["details"]["value"]
-        raw_versions.each do |localized_version|
-          language = localized_version["value"]["localeCode"]
-          parsed_versions[language.to_sym] = {
+        @versions ||= (raw_data["versions"].first["details"]["value"] || []).map do |localized_version|
+          {
+              id: localized_version["value"]["id"],
+              locale_code: localized_version["value"]["localeCode"],
               name: localized_version["value"]["name"]["value"],
-              description: localized_version["value"]["description"]["value"]
+              description: localized_version["value"]["description"]["value"],
+              status: localized_version["value"]["status"],
+              publication_name: localized_version["value"]["publicationName"]
           }
         end
-        return parsed_versions
+      end
+
+      def active_versions
+        @versions.select { |version|
+          version[:status] == 'active'
+        } || []
+      end
+
+      def proposed_versions
+        @versions.select { |version|
+          version[:status] == 'proposed'
+        } || []
       end
 
       # transforms user-set versions to iTC ones
@@ -84,16 +88,44 @@ module Spaceship
           # input that comes from iTC api
           return
         end
-        new_versions = []
+
+        new_versions = active_versions
+
         value.each do |language, current_version|
-          new_versions << {
+          proposed = proposed_versions.find { |proposed_version|
+            proposed_version[:locale_code] == language.to_s
+          }
+
+          is_active = active_versions.any? { |active_version|
+            active_version[:locale_code] == language.to_s and
+                active_version[:name] == current_version[:name] and
+                active_version[:description] == current_version[:description]
+          }
+
+          unless is_active
+            new_versions <<  {
+                id: !proposed.nil? ? proposed[:id] : nil,
+                locale_code: language,
+                name: current_version[:name],
+                description: current_version[:description],
+                status: !proposed.nil? ? proposed[:status] : nil,
+                publication_name: nil
+            }
+          end
+        end
+
+        new_versions = new_versions.map { |current_version|
+          {
               "value" => {
                   "name" => {"value" => current_version[:name]},
                   "description" => {"value" => current_version[:description]},
-                  "localeCode" => language.to_s
+                  "localeCode" => current_version[:locale_code],
+                  "publicationName" => nil,
+                  "status" => current_version[:status],
+                  "id" => current_version[:id]
               }
           }
-        end
+        }
 
         raw_data.set(["versions"], [{reviewNotes: {value: @review_notes}, "contentHosting" => raw_data['versions'].first['contentHosting'], "details" => {"value" => new_versions}, "id" => raw_data["versions"].first["id"], "reviewScreenshot" => {"value" => review_screenshot}}])
       end
@@ -103,13 +135,13 @@ module Spaceship
         new_intervals = []
         value.each do |current_interval|
           new_intervals << {
-            "value" =>   {
-              "tierStem" =>  current_interval[:tier],
-              "priceTierEndDate" =>  current_interval[:end_date],
-              "priceTierEffectiveDate" =>  current_interval[:begin_date],
-              "grandfathered" =>  current_interval[:grandfathered],
-              "country" => current_interval[:country]
-            }
+              "value" => {
+                  "tierStem" => current_interval[:tier],
+                  "priceTierEndDate" => current_interval[:end_date],
+                  "priceTierEffectiveDate" => current_interval[:begin_date],
+                  "grandfathered" => current_interval[:grandfathered],
+                  "country" => current_interval[:country]
+              }
           }
         end
         raw_data.set(["pricingIntervals"], new_intervals)
@@ -144,14 +176,14 @@ module Spaceship
         new_intro_offers = []
         value.each do |current_intro_offer|
           new_intro_offers << {
-              "value" =>  {
-                  "country" =>  current_intro_offer[:country],
-                  "durationType" =>  current_intro_offer[:duration_type],
-                  "startDate" =>  current_intro_offer[:start_date],
-                  "endDate" =>  current_intro_offer[:end_date],
-                  "numOfPeriods" =>  current_intro_offer[:num_of_periods],
-                  "offerModeType" =>  current_intro_offer[:offer_mode_type],
-                  "tierStem" =>  current_intro_offer[:tier_stem],
+              "value" => {
+                  "country" => current_intro_offer[:country],
+                  "durationType" => current_intro_offer[:duration_type],
+                  "startDate" => current_intro_offer[:start_date],
+                  "endDate" => current_intro_offer[:end_date],
+                  "numOfPeriods" => current_intro_offer[:num_of_periods],
+                  "offerModeType" => current_intro_offer[:offer_mode_type],
+                  "tierStem" => current_intro_offer[:tier_stem],
               }
           }
         end
@@ -194,20 +226,6 @@ module Spaceship
 
       # Saves the current In-App-Purchase
       def save!
-        # Transform localization versions back to original format.
-        versions_array = []
-        versions.each do |language, value|
-          versions_array << {
-                    "value" =>  {
-                      "description" => { "value" => value[:description] },
-                      "name" => { "value" => value[:name] },
-                      "localeCode" => language.to_s
-                    }
-          }
-        end
-
-        raw_data.set(["versions"], [{ reviewNotes: { value: @review_notes }, contentHosting: raw_data['versions'].first['contentHosting'], "details" => { "value" => versions_array }, id: raw_data["versions"].first["id"], reviewScreenshot: { "value" => review_screenshot } }])
-
         # transform pricingDetails
         intervals_array = []
         pricing_intervals.each do |interval|
