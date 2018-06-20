@@ -250,15 +250,15 @@ module Spaceship
         new_intro_offers = []
         value.each do |current_intro_offer|
           new_intro_offers << {
-              "value" =>  {
-                  "country" =>  current_intro_offer[:country],
-                  "durationType" =>  current_intro_offer[:duration_type],
-                  "startDate" =>  current_intro_offer[:start_date],
-                  "endDate" =>  current_intro_offer[:end_date],
-                  "numOfPeriods" =>  current_intro_offer[:num_of_periods],
-                  "offerModeType" =>  current_intro_offer[:offer_mode_type],
-                  "tierStem" =>  current_intro_offer[:tier_stem]
-              }
+            "value" => {
+              "country" => current_intro_offer[:country],
+              "durationType" => current_intro_offer[:duration_type],
+              "startDate" => current_intro_offer[:start_date],
+              "endDate" => current_intro_offer[:end_date],
+              "numOfPeriods" => current_intro_offer[:num_of_periods],
+              "offerModeType" => current_intro_offer[:offer_mode_type],
+              "tierStem" => current_intro_offer[:tier_stem]
+            }
           }
         end
         @subscription_pricing.raw_data.set(['introOffers'], new_intro_offers)
