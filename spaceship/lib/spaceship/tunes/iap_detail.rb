@@ -88,17 +88,30 @@ module Spaceship
       # }
       def versions
         parsed_versions = {}
-        raw_versions = raw_data["versions"].first["details"]["value"]
+        raw_versions = raw_data["versions"].first["details"]["value"] || []
         raw_versions.each do |localized_version|
           language = localized_version["value"]["localeCode"]
           parsed_versions[language.to_sym] = {
-            name: localized_version["value"]["name"]["value"],
-            description: localized_version["value"]["description"]["value"],
-            id: localized_version["value"]["id"],
-            status: localized_version["value"]["status"]
+              name: localized_version["value"]["name"]["value"],
+              description: localized_version["value"]["description"]["value"],
+              id: localized_version["value"]["id"],
+              status: localized_version["value"]["status"],
+              locale_code: language
           }
         end
         return parsed_versions
+      end
+
+      def active_versions
+        versions.select do |version|
+          version[:status] == 'active'
+        end || []
+      end
+
+      def proposed_versions
+        versions.select do |version|
+          version[:status] == 'proposed'
+        end || []
       end
 
       # transforms user-set versions to iTC ones
@@ -107,14 +120,30 @@ module Spaceship
           # input that comes from iTC api
           return
         end
-        new_versions = []
+
+        new_versions = active_versions
+
         value.each do |language, current_version|
+          proposed = proposed_versions.find do |proposed_version|
+            proposed_version[:locale_code] == language.to_s
+          end
+
+          is_active = active_versions.any? do |active_version|
+            active_version[:locale_code] == language.to_s and
+              active_version[:name] == current_version[:name] and
+              active_version[:description] == current_version[:description]
+          end
+
+          next if is_active
+
           new_versions << {
               "value" => {
                   "name" => { "value" => current_version[:name] },
                   "description" => { "value" => current_version[:description] },
                   "localeCode" => language.to_s,
-                  "id" => current_version[:id]
+                  "publicationName" => nil,
+                  "status" => !proposed.nil? ? proposed[:status] : nil,
+                  "id" => !proposed.nil? ? proposed[:id] : nil
               }
           }
         end
@@ -164,15 +193,15 @@ module Spaceship
         new_intro_offers = []
         value.each do |current_intro_offer|
           new_intro_offers << {
-              "value" =>  {
-                  "country" =>  current_intro_offer[:country],
-                  "durationType" =>  current_intro_offer[:duration_type],
-                  "startDate" =>  current_intro_offer[:start_date],
-                  "endDate" =>  current_intro_offer[:end_date],
-                  "numOfPeriods" =>  current_intro_offer[:num_of_periods],
-                  "offerModeType" =>  current_intro_offer[:offer_mode_type],
-                  "tierStem" =>  current_intro_offer[:tier_stem]
-              }
+            "value" => {
+              "country" => current_intro_offer[:country],
+              "durationType" => current_intro_offer[:duration_type],
+              "startDate" => current_intro_offer[:start_date],
+              "endDate" => current_intro_offer[:end_date],
+              "numOfPeriods" => current_intro_offer[:num_of_periods],
+              "offerModeType" => current_intro_offer[:offer_mode_type],
+              "tierStem" => current_intro_offer[:tier_stem]
+            }
           }
         end
         @subscription_pricing.raw_data.set(['introOffers'], new_intro_offers)
