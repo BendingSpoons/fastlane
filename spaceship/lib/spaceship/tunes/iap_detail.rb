@@ -103,15 +103,25 @@ module Spaceship
       end
 
       def active_versions
-        versions.select do |version|
-          version[:status] == 'active'
-        end || []
+        all_versions('active')
       end
 
       def proposed_versions
-        versions.select do |version|
-          version[:status] == 'proposed'
-        end || []
+        all_versions('proposed')
+      end
+
+      # It overrides the proposed version to the active (currently on the store) version
+
+      # @return (Hash) Hash of languages
+      # @example: {
+      #   'de-DE': {
+      #     name: "Name shown in AppStore",
+      #     description: "Description of the In app Purchase"
+      #
+      #   }
+      # }
+      def versions
+        active_versions.merge(proposed_versions)
       end
 
       # transforms user-set versions to iTC ones
@@ -121,20 +131,15 @@ module Spaceship
           return
         end
 
-        new_versions = active_versions
+        new_versions = active_versions.values
 
         value.each do |language, current_version|
-          proposed = proposed_versions.find do |proposed_version|
-            proposed_version[:locale_code] == language.to_s
-          end
+          is_proposed = proposed_versions.key?(language)
+          is_active = active_versions.key?(language)
 
-          is_active = active_versions.any? do |active_version|
-            active_version[:locale_code] == language.to_s and
-              active_version[:name] == current_version[:name] and
-              active_version[:description] == current_version[:description]
-          end
-
-          next if is_active
+          next if is_active &&
+                  active_versions[language][:name] == current_version[:name] &&
+                  active_versions[language][:description] == current_version[:description]
 
           new_versions << {
               "value" => {
@@ -142,8 +147,8 @@ module Spaceship
                   "description" => { "value" => current_version[:description] },
                   "localeCode" => language.to_s,
                   "publicationName" => nil,
-                  "status" => !proposed.nil? ? proposed[:status] : nil,
-                  "id" => !proposed.nil? ? proposed[:id] : nil
+                  "status" => is_proposed ? proposed_versions[language][:status] : nil,
+                  "id" => is_proposed ? proposed_versions[language][:id] : nil
               }
           }
         end
@@ -317,6 +322,36 @@ module Spaceship
       end
 
       private
+
+      # @return (Hash) Hash of languages
+      # @example: {
+      #   'de-DE': {
+      #     id: nil,
+      #     locale_code: "de-DE",
+      #     name: "Name shown in AppStore",
+      #     description: "Description of the In app Purchase"
+      #     status: 'active'
+      #     publication_name: nil
+      #   }
+      # }
+      def all_versions(status = 'active')
+        parsed_versions = {}
+        raw_versions = raw_data["versions"].first["details"]["value"]
+        raw_versions.each do |localized_version|
+          next if status != localized_version["value"]["status"]
+          language = localized_version["value"]["localeCode"]
+          parsed_versions[language.to_sym] = {
+              id: localized_version["value"]["id"],
+              locale_code: localized_version["value"]["localeCode"],
+              name: localized_version["value"]["name"]["value"],
+              description: localized_version["value"]["description"]["value"],
+              status: localized_version["value"]["status"],
+              publication_name: localized_version["value"]["publicationName"]
+          }
+        end
+
+        parsed_versions
+      end
 
       # Checks wheather an iap uses world wide or territorial pricing.
       #
