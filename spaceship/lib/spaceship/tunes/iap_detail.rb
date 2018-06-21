@@ -57,6 +57,16 @@ module Spaceship
         end
       end
 
+      def active_versions
+        all_versions 'active'
+      end
+
+      def proposed_versions
+        all_versions 'proposed'
+      end
+
+      # It overrides the proposed version to the active (currently on the store) version
+
       # @return (Hash) Hash of languages
       # @example: {
       #   'de-DE': {
@@ -66,16 +76,7 @@ module Spaceship
       #   }
       # }
       def versions
-        parsed_versions = {}
-        raw_versions = raw_data["versions"].first["details"]["value"]
-        raw_versions.each do |localized_version|
-          language = localized_version["value"]["localeCode"]
-          parsed_versions[language.to_sym] = {
-              name: localized_version["value"]["name"]["value"],
-              description: localized_version["value"]["description"]["value"]
-          }
-        end
-        return parsed_versions
+        active_versions.merge(proposed_versions)
       end
 
       # transforms user-set versions to iTC ones
@@ -84,16 +85,39 @@ module Spaceship
           # input that comes from iTC api
           return
         end
-        new_versions = []
+
+        new_versions = active_versions.values
+
         value.each do |language, current_version|
-          new_versions << {
+          language = language.to_sym
+          is_proposed = proposed_versions.key?(language)
+          is_active = active_versions.key?(language)
+          exist_active = (is_active and active_versions[language][:name] == current_version[:name] and  active_versions[language][:description] == current_version[:description])
+
+          unless exist_active
+            new_versions <<  {
+                id: is_proposed ? proposed_versions[language][:id] : nil,
+                locale_code: language,
+                name: current_version[:name],
+                description: current_version[:description],
+                status: is_proposed ? proposed_versions[language][:status] : nil,
+                publication_name: nil
+            }
+          end
+        end
+
+        new_versions = new_versions.map { |current_version|
+          {
               "value" => {
                   "name" => {"value" => current_version[:name]},
                   "description" => {"value" => current_version[:description]},
-                  "localeCode" => language.to_s
+                  "localeCode" => current_version[:locale_code],
+                  "publicationName" => nil,
+                  "status" => current_version[:status],
+                  "id" => current_version[:id]
               }
           }
-        end
+        }
 
         raw_data.set(["versions"], [{reviewNotes: {value: @review_notes}, "contentHosting" => raw_data['versions'].first['contentHosting'], "details" => {"value" => new_versions}, "id" => raw_data["versions"].first["id"], "reviewScreenshot" => {"value" => review_screenshot}}])
       end
@@ -103,13 +127,13 @@ module Spaceship
         new_intervals = []
         value.each do |current_interval|
           new_intervals << {
-            "value" =>   {
-              "tierStem" =>  current_interval[:tier],
-              "priceTierEndDate" =>  current_interval[:end_date],
-              "priceTierEffectiveDate" =>  current_interval[:begin_date],
-              "grandfathered" =>  current_interval[:grandfathered],
-              "country" => current_interval[:country]
-            }
+              "value" => {
+                  "tierStem" => current_interval[:tier],
+                  "priceTierEndDate" => current_interval[:end_date],
+                  "priceTierEffectiveDate" => current_interval[:begin_date],
+                  "grandfathered" => current_interval[:grandfathered],
+                  "country" => current_interval[:country]
+              }
           }
         end
         raw_data.set(["pricingIntervals"], new_intervals)
@@ -144,14 +168,14 @@ module Spaceship
         new_intro_offers = []
         value.each do |current_intro_offer|
           new_intro_offers << {
-              "value" =>  {
-                  "country" =>  current_intro_offer[:country],
-                  "durationType" =>  current_intro_offer[:duration_type],
-                  "startDate" =>  current_intro_offer[:start_date],
-                  "endDate" =>  current_intro_offer[:end_date],
-                  "numOfPeriods" =>  current_intro_offer[:num_of_periods],
-                  "offerModeType" =>  current_intro_offer[:offer_mode_type],
-                  "tierStem" =>  current_intro_offer[:tier_stem],
+              "value" => {
+                  "country" => current_intro_offer[:country],
+                  "durationType" => current_intro_offer[:duration_type],
+                  "startDate" => current_intro_offer[:start_date],
+                  "endDate" => current_intro_offer[:end_date],
+                  "numOfPeriods" => current_intro_offer[:num_of_periods],
+                  "offerModeType" => current_intro_offer[:offer_mode_type],
+                  "tierStem" => current_intro_offer[:tier_stem],
               }
           }
         end
@@ -194,20 +218,6 @@ module Spaceship
 
       # Saves the current In-App-Purchase
       def save!
-        # Transform localization versions back to original format.
-        versions_array = []
-        versions.each do |language, value|
-          versions_array << {
-                    "value" =>  {
-                      "description" => { "value" => value[:description] },
-                      "name" => { "value" => value[:name] },
-                      "localeCode" => language.to_s
-                    }
-          }
-        end
-
-        raw_data.set(["versions"], [{ reviewNotes: { value: @review_notes }, contentHosting: raw_data['versions'].first['contentHosting'], "details" => { "value" => versions_array }, id: raw_data["versions"].first["id"], reviewScreenshot: { "value" => review_screenshot } }])
-
         # transform pricingDetails
         intervals_array = []
         pricing_intervals.each do |interval|
@@ -283,6 +293,37 @@ module Spaceship
       end
 
       private
+
+      # @return (Hash) Hash of languages
+      # @example: {
+      #   'de-DE': {
+      #     id: nil,
+      #     locale_code: "de-DE",
+      #     name: "Name shown in AppStore",
+      #     description: "Description of the In app Purchase"
+      #     status: 'active'
+      #     publication_name: nil
+      #   }
+      # }
+      def all_versions(status='active')
+        parsed_versions = {}
+        raw_versions = raw_data["versions"].first["details"]["value"]
+        raw_versions.each do |localized_version|
+          if status == localized_version["value"]["status"]
+            language = localized_version["value"]["localeCode"]
+            parsed_versions[language.to_sym] = {
+                id: localized_version["value"]["id"],
+                locale_code: localized_version["value"]["localeCode"],
+                name: localized_version["value"]["name"]["value"],
+                description: localized_version["value"]["description"]["value"],
+                status: localized_version["value"]["status"],
+                publication_name: localized_version["value"]["publicationName"]
+            }
+          end
+        end
+
+        parsed_versions
+      end
 
       # Checks wheather an iap uses world wide or territorial pricing.
       #
