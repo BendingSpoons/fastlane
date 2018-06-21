@@ -106,6 +106,7 @@ module Spaceship
         new_versions = active_versions.values
 
         value.each do |language, current_version|
+          language = language.to_sym
           is_proposed = proposed_versions.key?(language)
           is_active = active_versions.key?(language)
 
