@@ -365,7 +365,7 @@ module Spaceship
 
     def get_reviews(app_id, platform, storefront, version_id, page = 0, sort = 'REVIEW_SORT_ORDER_MOST_RECENT')
       per_page = 100 # apple default
-      
+
       index = page * per_page
       rating_url = "ra/apps/#{app_id}/platforms/#{platform}/reviews?"
       rating_url << "sort=#{sort}"
@@ -845,6 +845,23 @@ module Spaceship
               "type" => du_client.get_picture_type(upload_image),
               "originalFileName" => upload_image.file_name,
               "size" => data["length"],
+              "height" => data["height"],
+              "width" => data["width"],
+              "checksum" => data["md5"]
+          }
+      }
+    end
+
+    # Uploads an In-App-Purchase Promotion Icon
+    # @param app_id (AppId): The id of the app
+    # @param upload_image (UploadFile): The icon to upload
+    # @return [JSON] the promotion data, ready to be added to an In-App-Purchase
+    def upload_purchase_promotion_icon(app_id, upload_image)
+      data = du_client.upload_purchase_promotion_icon(app_id, upload_image, content_provider_id, sso_token_for_image)
+      {
+          "value" => {
+              "assetToken" => data["token"],
+              "originalFileName" => upload_image.file_name,
               "height" => data["height"],
               "width" => data["width"],
               "checksum" => data["md5"]
@@ -1358,7 +1375,7 @@ module Spaceship
     end
 
     # Creates an In-App-Purchases
-    def create_iap!(app_id: nil, type: nil, versions: nil, reference_name: nil, product_id: nil, cleared_for_sale: true, review_notes: nil, review_screenshot: nil, pricing_intervals: nil, family_id: nil, subscription_duration: nil, subscription_free_trial: nil)
+    def create_iap!(app_id: nil, type: nil, versions: nil, reference_name: nil, product_id: nil, cleared_for_sale: true, promotion_icon: nil, review_notes: nil, review_screenshot: nil, pricing_intervals: nil, family_id: nil, subscription_duration: nil, subscription_free_trial: nil)
       # Load IAP Template based on Type
       type ||= "consumable"
       r = request(:get, "ra/apps/#{app_id}/iaps/#{type}/template")
@@ -1407,6 +1424,27 @@ module Spaceship
         upload_file = UploadFile.from_path(review_screenshot)
         screenshot_data = upload_purchase_review_screenshot(app_id, upload_file)
         data["versions"][0]["reviewScreenshot"] = screenshot_data
+      end
+
+      if promotion_icon
+        # Upload Promotion Icon
+        upload_file = UploadFile.from_path(promotion_icon)
+        promotion_data = upload_purchase_promotion_icon(app_id, upload_file)
+
+        data["versions"][0]["merch"] = {
+          "images" => [{
+             "id" => nil,
+             "image" => {
+               "value" => promotion_data["value"],
+               "isEditable" => true,
+               "isRequired" => false,
+               "errorKeys" => nil
+             },
+             "status" => nil
+          }],
+          "isActive" => false,
+          "showByDefault" => true
+        }
       end
 
       # Now send back the modified hash
