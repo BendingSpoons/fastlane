@@ -40,6 +40,8 @@ module Spaceship
       # @return (String) the notes for the review team
       attr_accessor :review_notes
 
+      attr_accessor :promotion_icon
+
       # @return (Hash) subscription pricing target
       attr_accessor :subscription_price_target
 
@@ -159,7 +161,8 @@ module Spaceship
           "contentHosting" => raw_data['versions'].first['contentHosting'],
           "details" => { "value" => new_versions },
           "id" => raw_data["versions"].first["id"],
-          "reviewScreenshot" => { "value" => review_screenshot }
+          "reviewScreenshot" => { "value" => review_screenshot },
+          "merch" => raw_data["versions"].first["merch"]
         }])
       end
 
@@ -251,6 +254,12 @@ module Spaceship
         raw_data['versions'].first['reviewScreenshot']['value']
       end
 
+      # @return (Hash) Hash containing existing review screenshot data
+      def promotion_icon
+        return nil unless raw_data && raw_data["versions"] && raw_data["versions"].first && raw_data["versions"].first["merch"] && raw_data['versions'].first["merch"]["value"]
+        raw_data['versions'].first['merch']['value']
+      end
+
       # Saves the current In-App-Purchase
       def save!
         # Transform localization versions back to original format.
@@ -290,6 +299,30 @@ module Spaceship
           raw_data["versions"][0]["reviewScreenshot"] = screenshot_data
         end
 
+        if @promotion_icon
+          # Upload Promotion Icon
+          upload_file = UploadFile.from_path(@promotion_icon)
+          promotion_data = client.upload_purchase_promotion_icon(application.apple_id, upload_file)
+
+          icons = raw_data["versions"][0]["merch"]["images"]
+          active_icon = icons.select { |icon| icon["status"] == 'active' }
+          proposed_icon = icons.select { |icon| icon["status"] == 'proposed' }
+
+          new_icon = {
+              "id" => proposed_icon.empty? ? nil : proposed_icon[0]["id"],
+              "image" => {
+                  "value" => promotion_data["value"],
+                  "isEditable" => true,
+                  "isRequired" => false,
+                  "errorKeys" => nil
+              },
+              "status" => proposed_icon.empty? ? nil : proposed_icon[0]["status"]
+          }
+
+          raw_data["versions"][0]["merch"]["images"] = []
+          raw_data["versions"][0]["merch"]["images"] << active_icon[0] unless active_icon.empty?
+          raw_data["versions"][0]["merch"]["images"] << new_icon
+        end
         # Update the Purchase
         client.update_iap!(app_id: application.apple_id, purchase_id: self.purchase_id, data: raw_data)
 
