@@ -820,6 +820,23 @@ module Spaceship
       }
     end
 
+    # Uploads an In-App-Purchase Promotion Icon
+    # @param app_id (AppId): The id of the app
+    # @param upload_image (UploadFile): The icon to upload
+    # @return [JSON] the promotion data, ready to be added to an In-App-Purchase
+    def upload_purchase_promotion_icon(app_id, upload_image)
+      data = du_client.upload_purchase_promotion_icon(app_id, upload_image, content_provider_id, sso_token_for_image)
+      {
+          "value" => {
+              "assetToken" => data["token"],
+              "originalFileName" => upload_image.file_name,
+              "height" => data["height"],
+              "width" => data["width"],
+              "checksum" => data["md5"]
+          }
+      }
+    end
+
     # Uploads a screenshot
     # @param app_version (AppVersion): The version of your app
     # @param upload_image (UploadFile): The image to upload
