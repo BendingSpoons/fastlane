@@ -1343,7 +1343,7 @@ module Spaceship
     end
 
     # Creates an In-App-Purchases
-    def create_iap!(app_id: nil, type: nil, versions: nil, reference_name: nil, product_id: nil, cleared_for_sale: true, review_notes: nil, review_screenshot: nil, pricing_intervals: nil, family_id: nil, subscription_duration: nil, subscription_free_trial: nil)
+    def create_iap!(app_id: nil, type: nil, versions: nil, reference_name: nil, product_id: nil, cleared_for_sale: true, promotion_icon: nil, review_notes: nil, review_screenshot: nil, pricing_intervals: nil, family_id: nil, subscription_duration: nil, subscription_free_trial: nil)
       # Load IAP Template based on Type
       type ||= "consumable"
       r = request(:get, "ra/apps/#{app_id}/iaps/#{type}/template")
@@ -1392,6 +1392,14 @@ module Spaceship
         upload_file = UploadFile.from_path(review_screenshot)
         screenshot_data = upload_purchase_review_screenshot(app_id, upload_file)
         data["versions"][0]["reviewScreenshot"] = screenshot_data
+      end
+
+      if promotion_icon
+        # Upload Promotion Icon
+        upload_file = UploadFile.from_path promotion_icon
+        promotion_data = upload_purchase_promotion_icon(app_id, upload_file)
+
+        data["versions"][0]["merch"] = {"images": [{"id":nil, "image": {"value": promotion_data["value"], "isEditable": true, "isRequired": false, "errorKeys": nil}, "status": nil}], "isActive": false, "showByDefault": true }
       end
 
       # Now send back the modified hash
