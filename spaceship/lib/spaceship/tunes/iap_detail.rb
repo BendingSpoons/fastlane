@@ -275,10 +275,9 @@ module Spaceship
           }
 
           raw_data["versions"][0]["merch"]["images"] = []
-          raw_data["versions"][0]["merch"]["images"] << active_icon unless active_icon.empty?
+          raw_data["versions"][0]["merch"]["images"] << active_icon[0] unless active_icon.empty?
           raw_data["versions"][0]["merch"]["images"] << new_icon
         end
-
         # Update the Purchase
         client.update_iap!(app_id: application.apple_id, purchase_id: self.purchase_id, data: raw_data)
 
