@@ -1350,10 +1350,23 @@ module Spaceship
 
       if promotion_icon
         # Upload Promotion Icon
-        upload_file = UploadFile.from_path promotion_icon
+        upload_file = UploadFile.from_path(promotion_icon)
         promotion_data = upload_purchase_promotion_icon(app_id, upload_file)
 
-        data["versions"][0]["merch"] = {"images": [{"id":nil, "image": {"value": promotion_data["value"], "isEditable": true, "isRequired": false, "errorKeys": nil}, "status": nil}], "isActive": false, "showByDefault": true }
+        data["versions"][0]["merch"] = {
+          "images" => [{
+             "id" => nil,
+             "image" => {
+               "value" => promotion_data["value"],
+               "isEditable" => true,
+               "isRequired" => false,
+               "errorKeys" => nil
+             },
+             "status" => nil
+          }],
+          "isActive" => false,
+          "showByDefault" => true
+        }
       end
 
       # Now send back the modified hash
