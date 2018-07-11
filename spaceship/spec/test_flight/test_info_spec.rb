@@ -28,7 +28,8 @@ describe Spaceship::TestFlight::TestInfo do
 
   before do
     # Use a simple client for all data models
-    Spaceship::TestFlight::Base.client = mock_client
+    allow(Spaceship::TestFlight::Base).to receive(:client).and_return(mock_client)
+    allow(mock_client).to receive(:team_id).and_return('')
   end
 
   it 'gets the value from the first locale' do
@@ -44,13 +45,13 @@ describe Spaceship::TestFlight::TestInfo do
 
   it 'copies its contents' do
     new_test_info = test_info.deep_copy
-    expect(new_test_info.object_id).to_not eq(test_info.object_id)
+    expect(new_test_info.object_id).to_not(eq(test_info.object_id))
 
     # make sure it is a deep copy, but the contents are the same
     new_test_info.raw_data.zip(test_info.raw_data).each do |sub_array|
       new_item = sub_array.first
       item = sub_array.last
-      expect(new_item.object_id).to_not eq(item.object_id)
+      expect(new_item.object_id).to_not(eq(item.object_id))
       expect(new_item.to_s).to eq(item.to_s)
     end
   end

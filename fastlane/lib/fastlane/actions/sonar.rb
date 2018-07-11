@@ -44,8 +44,8 @@ module Fastlane
 
       def self.details
         [
-          "See http://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner for details.",
-          "It can process unit test results if formatted as junit report as shown in [xctest](#xctest) action. It can also integrate coverage reports in Cobertura format, which can be transformed into by [slather](#slather) action."
+          "See [http://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner](http://docs.sonarqube.org/display/SCAN/Analyzing+with+SonarQube+Scanner) for details.",
+          "It can process unit test results if formatted as junit report as shown in [xctest](https://docs.fastlane.tools/actions/xctest/) action. It can also integrate coverage reports in Cobertura format, which can be transformed into by the [slather](https://docs.fastlane.tools/actions/slather/) action."
         ].join("\n")
       end
 
@@ -56,7 +56,7 @@ module Fastlane
                                         description: "The path to your sonar project configuration file; defaults to `sonar-project.properties`", # default is enforced by sonar-scanner binary
                                         optional: true,
                                         verify_block: proc do |value|
-                                          UI.user_error!("Couldn't find file at path '#{value}'") unless value.nil? or File.exist?(value)
+                                          UI.user_error!("Couldn't find file at path '#{value}'") unless value.nil? || File.exist?(value)
                                         end),
           FastlaneCore::ConfigItem.new(key: :project_key,
                                        env_name: "FL_SONAR_RUNNER_PROJECT_KEY",

@@ -70,6 +70,7 @@ module Supply
       Google::Apis::ClientOptions.default.application_version = Fastlane::VERSION
       Google::Apis::ClientOptions.default.read_timeout_sec = 300
       Google::Apis::ClientOptions.default.open_timeout_sec = 300
+      Google::Apis::ClientOptions.default.send_timeout_sec = 300
       Google::Apis::RequestOptions.default.retries = 5
 
       self.android_publisher = Androidpublisher::AndroidPublisherService.new
@@ -236,11 +237,31 @@ module Supply
       end
     end
 
+    def upload_bundle(path_to_aab)
+      ensure_active_edit!
+
+      result_upload = call_google_api do
+        android_publisher.upload_edit_bundle(
+          current_package_name,
+          self.current_edit.id,
+          upload_source: path_to_aab,
+          content_type: "application/octet-stream"
+        )
+      end
+
+      return result_upload.version_code
+    end
+
     # Updates the track for the provided version code(s)
     def update_track(track, rollout, apk_version_code)
       ensure_active_edit!
 
       track_version_codes = apk_version_code.kind_of?(Array) ? apk_version_code : [apk_version_code]
+
+      # This change happend on 2018-04-24
+      # rollout cannot be sent on any other track besides "rollout"
+      # https://github.com/fastlane/fastlane/issues/12372
+      rollout = nil unless track == "rollout"
 
       track_body = Androidpublisher::Track.new({
         track: track,
@@ -366,7 +387,7 @@ module Supply
     def call_google_api
       yield if block_given?
     rescue Google::Apis::ClientError => e
-      UI.user_error! "Google Api Error: #{e.message}"
+      UI.user_error!("Google Api Error: #{e.message}")
     end
   end
 end

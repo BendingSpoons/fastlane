@@ -1,3 +1,5 @@
+require_relative 'app_review'
+
 module Spaceship
   module Tunes
     # Represents app ratings from iTunesConnect

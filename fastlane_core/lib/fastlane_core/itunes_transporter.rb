@@ -1,7 +1,10 @@
-require 'pty'
 require 'shellwords'
 require 'fileutils'
 require 'credentials_manager/account_manager'
+
+require_relative 'features'
+require_relative 'helper'
+require_relative 'fastlane_pty'
 
 module FastlaneCore
   # The TransporterInputError occurs when you passed wrong inputs to the {Deliver::ItunesTransporter}
@@ -28,7 +31,15 @@ module FastlaneCore
     private_constant :ERROR_REGEX, :WARNING_REGEX, :OUTPUT_REGEX, :RETURN_VALUE_REGEX, :SKIP_ERRORS
 
     def execute(command, hide_output)
-      return command if Helper.is_test?
+      return command if Helper.test?
+
+      # Workaround because the traditional transporter broke on 1st March 2018
+      # More information https://github.com/fastlane/fastlane/issues/11958
+      # As there was no communication from Apple, we don't know if this is a temporary
+      # server outage, or something they changed without giving a heads-up
+      if ENV["DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS"].to_s.length == 0
+        ENV["DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS"] = "-t DAV"
+      end
 
       @errors = []
       @warnings = []
@@ -36,14 +47,14 @@ module FastlaneCore
 
       if hide_output
         # Show a one time message instead
-        UI.success("Waiting for iTunes Connect transporter to be finished.")
+        UI.success("Waiting for App Store Connect transporter to be finished.")
         UI.success("iTunes Transporter progress... this might take a few minutes...")
       end
 
       begin
-        PTY.spawn(command) do |stdin, stdout, pid|
+        FastlaneCore::FastlanePty.spawn(command) do |command_stdout, command_stdin, pid|
           begin
-            stdin.each do |line|
+            command_stdout.each do |line|
               @all_lines << line
               parse_line(line, hide_output) # this is where the parsing happens
             end
@@ -107,10 +118,10 @@ module FastlaneCore
         UI.error("[Transporter Error Output]: #{$1}")
 
         # Check if it's a login error
-        if $1.include? "Your Apple ID or password was entered incorrectly" or
-           $1.include? "This Apple ID has been locked for security reasons"
+        if $1.include?("Your Apple ID or password was entered incorrectly") ||
+           $1.include?("This Apple ID has been locked for security reasons")
 
-          unless Helper.is_test?
+          unless Helper.test?
             CredentialsManager::AccountManager.new(user: @user).invalid_credentials
             UI.error("Please run this tool again to apply the new password")
           end
@@ -137,7 +148,7 @@ module FastlaneCore
         end
       end
 
-      if !hide_output and line =~ OUTPUT_REGEX
+      if !hide_output && line =~ OUTPUT_REGEX
         # General logging for debug purposes
         unless output_done
           UI.verbose("[Transporter]: #{$1}")
@@ -179,11 +190,11 @@ module FastlaneCore
       unless password === /^[0-9a-zA-Z\.\$\_]*$/
         UI.error([
           "Password contains special characters, which may not be handled properly by iTMSTransporter.",
-          "If you experience problems uploading to iTunes Connect, please consider changing your password to something with only alphanumeric characters."
+          "If you experience problems uploading to App Store Connect, please consider changing your password to something with only alphanumeric characters."
         ].join(' '))
       end
       # rubocop:enable Style/CaseEquality
-      UI.error("Could not download/upload from iTunes Connect! It's probably related to your password or your internet connection.")
+      UI.error("Could not download/upload from App Store Connect! It's probably related to your password or your internet connection.")
     end
 
     private
@@ -252,7 +263,7 @@ module FastlaneCore
     end
 
     def java_code_option
-      if Helper.is_mac? && Helper.xcode_at_least?(9)
+      if Helper.mac? && Helper.xcode_at_least?(9)
         return "-jar #{Helper.transporter_java_jar_path.shellescape}"
       else
         return "-classpath #{Helper.transporter_java_jar_path.shellescape} com.apple.transporter.Application"
@@ -304,7 +315,7 @@ module FastlaneCore
     def initialize(user = nil, password = nil, use_shell_script = false, provider_short_name = nil)
       # Xcode 6.x doesn't have the same iTMSTransporter Java setup as later Xcode versions, so
       # we can't default to using the better direct Java invocation strategy for those versions.
-      use_shell_script ||= Helper.is_mac? && Helper.xcode_version.start_with?('6.')
+      use_shell_script ||= Helper.xcode_version.start_with?('6.')
       use_shell_script ||= Feature.enabled?('FASTLANE_ITUNES_TRANSPORTER_USE_SHELL_SCRIPT')
 
       @user = user
@@ -323,7 +334,7 @@ module FastlaneCore
     def download(app_id, dir = nil)
       dir ||= "/tmp"
 
-      UI.message("Going to download app metadata from iTunes Connect")
+      UI.message("Going to download app metadata from App Store Connect")
       command = @transporter_executor.build_download_command(@user, @password, app_id, dir, @provider_short_name)
       UI.verbose(@transporter_executor.build_download_command(@user, 'YourPassword', app_id, dir, @provider_short_name))
 
@@ -334,13 +345,13 @@ module FastlaneCore
         return download(app_id, dir)
       end
 
-      return result if Helper.is_test?
+      return result if Helper.test?
 
       itmsp_path = File.join(dir, "#{app_id}.itmsp")
       successful = result && File.directory?(itmsp_path)
 
       if successful
-        UI.success("✅ Successfully downloaded the latest package from iTunes Connect to #{itmsp_path}")
+        UI.success("✅ Successfully downloaded the latest package from App Store Connect to #{itmsp_path}")
       else
         handle_error(@password)
       end
@@ -348,7 +359,7 @@ module FastlaneCore
       successful
     end
 
-    # Uploads the modified package back to iTunes Connect
+    # Uploads the modified package back to App Store Connect
     # @param app_id [Integer] The unique App ID
     # @param dir [String] the path in which the package file is located
     # @return (Bool) True if everything worked fine
@@ -357,7 +368,7 @@ module FastlaneCore
     def upload(app_id, dir)
       actual_dir = File.join(dir, "#{app_id}.itmsp")
 
-      UI.message("Going to upload updated app to iTunes Connect")
+      UI.message("Going to upload updated app to App Store Connect")
       UI.success("This might take a few minutes. Please don't interrupt the script.")
 
       command = @transporter_executor.build_upload_command(@user, @password, actual_dir, @provider_short_name)
@@ -371,9 +382,9 @@ module FastlaneCore
       end
 
       if result
-        UI.header("Successfully uploaded package to iTunes Connect. It might take a few minutes until it's visible online.")
+        UI.header("Successfully uploaded package to App Store Connect. It might take a few minutes until it's visible online.")
 
-        FileUtils.rm_rf(actual_dir) unless Helper.is_test? # we don't need the package any more, since the upload was successful
+        FileUtils.rm_rf(actual_dir) unless Helper.test? # we don't need the package any more, since the upload was successful
       else
         handle_error(@password)
       end

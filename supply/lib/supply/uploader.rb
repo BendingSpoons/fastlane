@@ -5,10 +5,10 @@ module Supply
 
       client.begin_edit(package_name: Supply.config[:package_name])
 
-      UI.user_error!("No local metadata found, make sure to run `fastlane supply init` to setup supply") unless metadata_path || Supply.config[:apk] || Supply.config[:apk_paths]
+      verify_config!
 
       if metadata_path
-        UI.user_error!("Could not find folder #{metadata_path}") unless File.directory? metadata_path
+        UI.user_error!("Could not find folder #{metadata_path}") unless File.directory?(metadata_path)
 
         all_languages.each do |language|
           next if language.start_with?('.') # e.g. . or .. or hidden folders
@@ -24,6 +24,7 @@ module Supply
       end
 
       upload_binaries unless Supply.config[:skip_upload_apk]
+      upload_bundles unless Supply.config[:skip_upload_aab]
 
       promote_track if Supply.config[:track_promote_to]
 
@@ -35,6 +36,21 @@ module Supply
         UI.message("Uploading all changes to Google Play...")
         client.commit_current_edit!
         UI.success("Successfully finished the upload to Google Play")
+      end
+    end
+
+    def verify_config!
+      unless metadata_path || Supply.config[:apk] || Supply.config[:apk_paths] || Supply.config[:aab] || (Supply.config[:track] && Supply.config[:track_promote_to])
+        UI.user_error!("No local metadata, apks, aab, or track to promote were found, make sure to run `fastlane supply init` to setup supply")
+      end
+
+      # Can't upload both at apk and aab at same time
+      # Need to error out users when there both apks and aabs are detected
+      apk_paths = [Supply.config[:apk], Supply.config[:apk_paths]].flatten.compact
+      could_upload_apk = !apk_paths.empty? && !Supply.config[:skip_upload_apk]
+      could_upload_aab = Supply.config[:aab] && !Supply.config[:skip_upload_aab]
+      if could_upload_apk && could_upload_aab
+        UI.user_error!("Cannot provide both apk(s) and aab - use `skip_upload_apk`, `skip_upload_aab`, or  make sure to remove any existing .apk or .aab files that are no longer needed")
       end
     end
 
@@ -106,6 +122,7 @@ module Supply
 
     def upload_binaries
       apk_paths = [Supply.config[:apk]] unless (apk_paths = Supply.config[:apk_paths])
+      apk_paths.compact!
 
       apk_version_codes = []
 
@@ -120,7 +137,21 @@ module Supply
         end
       end
 
-      update_track(apk_version_codes)
+      # Only update tracks if we have version codes
+      # Updating a track with empty version codes can completely clear out a track
+      update_track(apk_version_codes) unless apk_version_codes.empty?
+    end
+
+    def upload_bundles
+      aab_path = Supply.config[:aab]
+      return unless aab_path
+
+      UI.message("Preparing aab at path '#{aab_path}' for upload...")
+      apk_version_codes = [client.upload_bundle(aab_path)]
+
+      # Only update tracks if we have version codes
+      # Updating a track with empty version codes can completely clear out a track
+      update_track(apk_version_codes) unless apk_version_codes.empty?
     end
 
     private
@@ -168,41 +199,47 @@ module Supply
     #  - Lesser than the greatest of any later (i.e. production) track
     #  - Or lesser than the currently being uploaded if it's in an earlier (i.e. alpha) track
     def check_superseded_tracks(apk_version_codes)
-      UI.message("Checking superseded tracks...")
+      UI.message("Checking superseded tracks, uploading '#{apk_version_codes}' to '#{Supply.config[:track]}'...")
       max_apk_version_code = apk_version_codes.max
       max_tracks_version_code = nil
 
-      tracks = ["production", "rollout", "beta", "alpha"]
+      tracks = ["production", "rollout", "beta", "alpha", "internal"]
       config_track_index = tracks.index(Supply.config[:track])
 
-      tracks.each_index do |track_index|
-        next if track_index.eql? config_track_index
-        track = tracks[track_index]
+      # Custom "closed" tracks are now allowed (https://support.google.com/googleplay/android-developer/answer/3131213)
+      # Custom tracks have an equal level with alpha (alpha is considered a closed track as well)
+      # If a track index is not found, we will assume is a custom track so an alpha index is given
+      config_track_index = tracks.index("alpha") unless config_track_index
 
+      tracks.each_index do |track_index|
+        track = tracks[track_index]
         track_version_codes = client.track_version_codes(track).sort
+        UI.verbose("Found '#{track_version_codes}' on track '#{track}'")
+
+        next if track_index.eql?(config_track_index)
         next if track_version_codes.empty?
 
         if max_tracks_version_code.nil?
           max_tracks_version_code = track_version_codes.max
-        else
-          removed_version_codes = track_version_codes.take_while do |v|
-            v < max_tracks_version_code || (v < max_apk_version_code && track_index > config_track_index)
-          end
-
-          unless removed_version_codes.empty?
-            keep_version_codes = track_version_codes - removed_version_codes
-            max_tracks_version_code = keep_version_codes[0] unless keep_version_codes.empty?
-            client.update_track(track, 1.0, keep_version_codes)
-            UI.message("Superseded track '#{track}', removed '#{removed_version_codes}'")
-          end
         end
+
+        removed_version_codes = track_version_codes.take_while do |v|
+          v < max_tracks_version_code || (v < max_apk_version_code && track_index > config_track_index)
+        end
+
+        next if removed_version_codes.empty?
+
+        keep_version_codes = track_version_codes - removed_version_codes
+        max_tracks_version_code = keep_version_codes[0] unless keep_version_codes.empty?
+        client.update_track(track, 1.0, keep_version_codes)
+        UI.message("Superseded track '#{track}', removed '#{removed_version_codes}'")
       end
     end
 
     # returns only language directories from metadata_path
     def all_languages
       Dir.entries(metadata_path)
-         .select { |f| File.directory? File.join(metadata_path, f) }
+         .select { |f| File.directory?(File.join(metadata_path, f)) }
          .reject { |f| f.start_with?('.') }
          .sort { |x, y| x <=> y }
     end

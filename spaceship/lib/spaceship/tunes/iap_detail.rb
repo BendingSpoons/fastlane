@@ -1,3 +1,8 @@
+require_relative '../du/upload_file'
+require_relative 'iap_status'
+require_relative 'iap_type'
+require_relative 'tunes_base'
+
 module Spaceship
   module Tunes
     class IAPDetail < TunesBase
@@ -37,6 +42,10 @@ module Spaceship
 
       # @return (Spaceship::Tunes::IAPSubscriptionPricing) Subscription pricing object which handle introductory pricing and subscriptions pricing
       attr_accessor :subscription_pricing
+
+      # @return (Hash) Relevant only for recurring subscriptions. Holds pricing related data, such
+      # as subscription pricing, intro offers, etc.
+      attr_accessor :raw_pricing_data
 
       attr_mapping({
         'adamId' => :purchase_id,
@@ -262,7 +271,7 @@ module Spaceship
 
         if @review_screenshot
           # Upload Screenshot
-          upload_file = UploadFile.from_path @review_screenshot
+          upload_file = UploadFile.from_path(@review_screenshot)
           screenshot_data = client.upload_purchase_review_screenshot(application.apple_id, upload_file)
           raw_data["versions"][0]["reviewScreenshot"] = screenshot_data
         end

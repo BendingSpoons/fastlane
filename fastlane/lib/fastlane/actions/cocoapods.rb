@@ -64,7 +64,7 @@ module Fastlane
                                        default_value: true),
           FastlaneCore::ConfigItem.new(key: :repo_update,
                                        env_name: "FL_COCOAPODS_REPO_UPDATE",
-                                       description: "Run `pod repo update` before install",
+                                       description: "Add `--repo-update` flag to `pod install` command",
                                        is_string: false,
                                        default_value: false,
                                        conflicting_options: [:try_repo_update_on_error]),
@@ -100,13 +100,15 @@ module Fastlane
                                        description: 'A callback invoked with the command output if there is a non-zero exit status',
                                        optional: true,
                                        is_string: false,
+                                       type: :string_callback,
                                        default_value: nil),
           FastlaneCore::ConfigItem.new(key: :try_repo_update_on_error,
                                        env_name: "FL_COCOAPODS_TRY_REPO_UPDATE_ON_ERROR",
                                        description: 'Retry with --repo-update if action was finished with error',
                                        optional: true,
                                        is_string: false,
-                                       default_value: true,
+                                       default_value: false,
+                                       type: Boolean,
                                        conflicting_options: [:repo_update])
         ]
         # Please don't add a version parameter to the `cocoapods` action. If you need to specify a version when running
@@ -115,7 +117,7 @@ module Fastlane
       end
 
       def self.is_supported?(platform)
-        [:ios, :mac].include? platform
+        [:ios, :mac].include?(platform)
       end
 
       def self.authors
