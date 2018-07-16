@@ -131,7 +131,7 @@ module Spaceship
       # @return (String) App Review Information Email Address
       attr_accessor :review_email
 
-      # @return (Boolean) The checkbox that indiciates if a demo account
+      # @return (Boolean) The checkbox that indicates if a demo account
       #   is needed. Is set automatically depending on if a user and pass
       #   are set
       attr_reader :review_user_needed
@@ -285,6 +285,13 @@ module Spaceship
 
       def review_user_needed
         (self.review_demo_user.to_s + self.review_demo_password.to_s).length > 0
+      end
+
+      def iaps
+        (raw_data["submittableAddOns"]["value"] || []).map do |iap_attrs|
+          iap_attrs[:application] = self.application
+          Tunes::IAPDetail.new(iap_attrs)
+        end
       end
 
       # Call this method to make sure the given languages are available for this app
