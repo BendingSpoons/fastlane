@@ -1,5 +1,6 @@
 
 require_relative 'tunes_client'
+require_relative 'app_addon'
 require_relative 'app_trailer'
 require_relative 'app_screenshot'
 require_relative 'app_image'
@@ -305,6 +306,13 @@ module Spaceship
 
       def review_user_needed
         (self.review_demo_user.to_s + self.review_demo_password.to_s).length > 0
+      end
+
+      def addons
+        (raw_data["submittableAddOns"]["value"] || []).map do |iap_attrs|
+          iap_attrs[:application] = self.application
+          Tunes::AppAddon.new(iap_attrs)
+        end
       end
 
       # Call this method to make sure the given languages are available for this app
