@@ -1213,6 +1213,16 @@ module Spaceship
       handle_itc_response(r)
     end
 
+    def submit_iap!(app_id, iap_addons)
+      url = "ra/apps/#{app_id}/iaps/submission"
+      r = request(:post) do |req|
+        req.url(url)
+        req.body = iap_addons.to_json
+        req.headers['Content-Type'] = 'application/json'
+      end
+      parse_response(r)
+    end
+
     # Loads the full In-App-Purchases
     def load_iap(app_id: nil, purchase_id: nil)
       r = request(:get, "ra/apps/#{app_id}/iaps/#{purchase_id}")
@@ -1396,6 +1406,32 @@ module Spaceship
         req.headers['Content-Type'] = 'application/json'
       end
       handle_itc_response(r.body)
+    end
+
+    #####################################################
+    # @!group IAP products
+    #####################################################
+    def addons(app_id)
+      r = request(:get, "ra/apps/#{app_id}/addons")
+      parse_response(r, 'data')
+    end
+
+    def delete_addon!(addon)
+      url = "ra/addons/delete/#{addon.addon_id}"
+      r = request(:post) do |req|
+        req.url(url)
+      end
+      parse_response(r)
+    end
+
+    def submit_addons!(app_id, addons)
+      url = "ra/apps/#{app_id}/iaps/submission"
+      r = request(:post) do |req|
+        req.url(url)
+        req.body = addons.to_json
+        req.headers['Content-Type'] = 'application/json'
+      end
+      parse_response(r)
     end
 
     #####################################################
