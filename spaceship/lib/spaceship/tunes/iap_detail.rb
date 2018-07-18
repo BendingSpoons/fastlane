@@ -38,8 +38,6 @@ module Spaceship
       # @return (Spaceship::Tunes::IAPSubscriptionPricing) Subscription pricing object which handle introductory pricing and subscriptions pricing
       attr_accessor :subscription_pricing
 
-      attr_accessor :can_submit_in_the_next_version
-
       attr_mapping({
         'adamId' => :purchase_id,
         'referenceName.value' => :reference_name,
@@ -47,8 +45,7 @@ module Spaceship
         'isNewsSubscription' => :is_news_subscription,
         'pricingDurationType.value' => :subscription_duration,
         'freeTrialDurationType.value' => :subscription_free_trial,
-        'clearedForSale.value' => :cleared_for_sale,
-        'itcsubmitNextVersion' => :can_submit_in_the_next_version
+        'clearedForSale.value' => :cleared_for_sale
       })
 
       def setup
@@ -201,8 +198,6 @@ module Spaceship
               tier_stem: intro_offer["value"]["tierStem"],
           }
         end
-
-
       end
 
       # @return (String) Human Readable type of the purchase
