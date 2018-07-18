@@ -1,5 +1,6 @@
 require_relative '../test_flight/group'
 require_relative '../test_flight/build'
+require_relative 'app_addon'
 require_relative 'app_analytics'
 require_relative 'app_details'
 require_relative 'app_ratings'
@@ -289,6 +290,26 @@ module Spaceship
         attrs = {}
         attrs[:application] = self
         Tunes::IAP.factory(attrs)
+      end
+
+      #####################################################
+      # @!group IAP products
+      #####################################################
+      def addons
+        ensure_not_a_bundle
+        addons = client.addons(apple_id)
+        addons.map do |attrs|
+          attrs[:application] = self
+          Tunes::AppAddon.factory(attrs)
+        end
+      end
+
+      def delete_addon!(addon)
+        client.delete_addon!(apple_id, addon)
+      end
+
+      def submit_addons!(addons)
+        client.submit_addons(apple_id, addons)
       end
 
       #####################################################
