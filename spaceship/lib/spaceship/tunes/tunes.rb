@@ -29,6 +29,7 @@ require_relative 'territory'
 require_relative 'availability'
 require_relative 'members'
 require_relative 'member'
+require_relative 'app_addon'
 
 require_relative 'app_version_promocodes'
 require_relative 'app_version_generated_promocodes'
