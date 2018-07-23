@@ -30,6 +30,7 @@ require 'spaceship/tunes/territory'
 require 'spaceship/tunes/availability'
 require 'spaceship/tunes/members'
 require 'spaceship/tunes/member'
+require 'spaceship/tunes/app_addon'
 
 require 'spaceship/tunes/app_version_promocodes'
 require 'spaceship/tunes/app_version_generated_promocodes'

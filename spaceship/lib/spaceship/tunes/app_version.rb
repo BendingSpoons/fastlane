@@ -287,10 +287,10 @@ module Spaceship
         (self.review_demo_user.to_s + self.review_demo_password.to_s).length > 0
       end
 
-      def iaps
+      def addons
         (raw_data["submittableAddOns"]["value"] || []).map do |iap_attrs|
           iap_attrs[:application] = self.application
-          Tunes::IAPDetail.new(iap_attrs)
+          Tunes::AppAddon.new(iap_attrs)
         end
       end
 
