@@ -84,6 +84,10 @@ module Spaceship
         all_versions('proposed')
       end
 
+      def rejected_versions
+        all_versions('rejected')
+      end
+
       # It overrides the proposed version to the active (currently on the store) version
 
       # @return (Hash) Hash of languages
@@ -109,33 +113,59 @@ module Spaceship
 
         value.each do |language, current_version|
           language = language.to_sym
+          is_rejected = rejected_versions.key?(language)
           is_proposed = proposed_versions.key?(language)
           is_active = active_versions.key?(language)
 
           next if is_active &&
-                  active_versions[language][:name] == current_version[:name] &&
-                  active_versions[language][:description] == current_version[:description]
+              active_versions[language][:name] == current_version[:name] &&
+              active_versions[language][:description] == current_version[:description]
+
+          status = nil
+          if is_proposed
+            status = proposed_versions[language][:status]
+          elsif is_rejected
+            status = rejected_versions[language][:status]
+          end
+
+          id = nil
+          if is_proposed
+            id = proposed_versions[language][:id]
+          elsif is_rejected
+            id = rejected_versions[language][:id]
+          end
 
           new_versions << {
-              "value" => {
-                  "name" => { "value" => current_version[:name] },
-                  "description" => { "value" => current_version[:description] },
-                  "localeCode" => language.to_s,
-                  "publicationName" => nil,
-                  "status" => is_proposed ? proposed_versions[language][:status] : nil,
-                  "id" => is_proposed ? proposed_versions[language][:id] : nil
-              }
+              id: id,
+              locale_code: language,
+              name: current_version[:name],
+              description: current_version[:description],
+              status: status,
+              publication_name: nil
           }
         end
 
+        new_versions = new_versions.map do |current_version|
+          {
+              "value" => {
+                  "name" => { "value" => current_version[:name] },
+                  "description" => { "value" => current_version[:description] },
+                  "localeCode" => current_version[:locale_code],
+                  "publicationName" => nil,
+                  "status" => current_version[:status],
+                  "id" => current_version[:id]
+              }
+          }
+        }
+
         raw_data.set(["versions"], [{
-          "reviewNotes" => { value: @review_notes },
-          "contentHosting" => raw_data['versions'].first['contentHosting'],
-          "details" => { "value" => new_versions },
-          "id" => raw_data["versions"].first["id"],
-          "reviewScreenshot" => { "value" => review_screenshot },
-          "merch" => raw_data["versions"].first["merch"]
-        }])
+                                        "reviewNotes" => { value: @review_notes },
+                                        "contentHosting" => raw_data['versions'].first['contentHosting'],
+                                        "details" => { "value" => new_versions },
+                                        "id" => raw_data["versions"].first["id"],
+                                        "reviewScreenshot" => { "value" => review_screenshot },
+                                        "merch" => raw_data["versions"].first["merch"]
+                                    }])
       end
 
       # transforms user-set intervals to iTC ones
@@ -240,12 +270,15 @@ module Spaceship
       # Saves the current In-App-Purchase
       def save!
         # transform pricingDetails
-        raw_pricing_intervals =
-          client.transform_to_raw_pricing_intervals(application.apple_id,
-                                                    self.purchase_id, pricing_intervals,
-                                                    subscription_price_target)
+        raw_pricing_intervals = client.transform_to_raw_pricing_intervals(
+          application.apple_id,
+          self.purchase_id, pricing_intervals,
+          subscription_price_target
+        )
         raw_data.set(["pricingIntervals"], raw_pricing_intervals)
         @raw_pricing_data["subscriptions"] = raw_pricing_intervals if @raw_pricing_data
+
+        raw_data["versions"][0]["reviewNotes"] = { value: @review_notes }
 
         if @review_screenshot
           # Upload Screenshot
