@@ -309,7 +309,7 @@ module Spaceship
       end
 
       def submit_addons!(addons)
-        client.submit_addons(apple_id, addons)
+        client.submit_addons!(apple_id, addons)
       end
 
       #####################################################
