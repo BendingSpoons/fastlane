@@ -80,36 +80,16 @@ module Spaceship
         end
       end
 
-      # @return (Hash) Hash of languages
-      # @example: {
-      #   'de-DE': {
-      #     name: "Name shown in AppStore",
-      #     description: "Description of the In app Purchase"
-      #
-      #   }
-      # }
-      def versions
-        parsed_versions = {}
-        raw_versions = raw_data["versions"].first["details"]["value"] || []
-        raw_versions.each do |localized_version|
-          language = localized_version["value"]["localeCode"]
-          parsed_versions[language.to_sym] = {
-              name: localized_version["value"]["name"]["value"],
-              description: localized_version["value"]["description"]["value"],
-              id: localized_version["value"]["id"],
-              status: localized_version["value"]["status"],
-              locale_code: language
-          }
-        end
-        return parsed_versions
-      end
-
       def active_versions
         all_versions('active')
       end
 
       def proposed_versions
         all_versions('proposed')
+      end
+
+      def rejected_versions
+        all_versions('rejected')
       end
 
       # It overrides the proposed version to the active (currently on the store) version
@@ -137,6 +117,7 @@ module Spaceship
 
         value.each do |language, current_version|
           language = language.to_sym
+          is_rejected = rejected_versions.key?(language)
           is_proposed = proposed_versions.key?(language)
           is_active = active_versions.key?(language)
 
@@ -144,7 +125,32 @@ module Spaceship
                   active_versions[language][:name] == current_version[:name] &&
                   active_versions[language][:description] == current_version[:description]
 
+          status = nil
+          if is_proposed
+            status = proposed_versions[language][:status]
+          elsif is_rejected
+            status = rejected_versions[language][:status]
+          end
+
+          id = nil
+          if is_proposed
+            id = proposed_versions[language][:id]
+          elsif is_rejected
+            id = rejected_versions[language][:id]
+          end
+
           new_versions << {
+              id: id,
+              locale_code: language,
+              name: current_version[:name],
+              description: current_version[:description],
+              status: status,
+              publication_name: nil
+          }
+        end
+
+        new_versions = new_versions.map do |current_version|
+          {
               "value" => {
                   "name" => { "value" => current_version[:name] },
                   "description" => { "value" => current_version[:description] },
@@ -278,12 +284,15 @@ module Spaceship
         raw_data.set(["versions"], [{ reviewNotes: { value: @review_notes }, contentHosting: raw_data['versions'].first['contentHosting'], "details" => { "value" => versions_array }, id: raw_data["versions"].first["id"], reviewScreenshot: { "value" => review_screenshot } }])
 
         # transform pricingDetails
-        raw_pricing_intervals =
-          client.transform_to_raw_pricing_intervals(application.apple_id,
-                                                    self.purchase_id, pricing_intervals,
-                                                    subscription_price_target)
+        raw_pricing_intervals = client.transform_to_raw_pricing_intervals(
+          application.apple_id,
+          self.purchase_id, pricing_intervals,
+          subscription_price_target
+        )
         raw_data.set(["pricingIntervals"], raw_pricing_intervals)
         @raw_pricing_data["subscriptions"] = raw_pricing_intervals if @raw_pricing_data
+
+        raw_data["versions"][0]["reviewNotes"] = { value: @review_notes }
 
         if @merch_screenshot
           # Upload App Store Promotional image (Optional)
