@@ -118,8 +118,8 @@ module Spaceship
           is_active = active_versions.key?(language)
 
           next if is_active &&
-                  active_versions[language][:name] == current_version[:name] &&
-                  active_versions[language][:description] == current_version[:description]
+              active_versions[language][:name] == current_version[:name] &&
+              active_versions[language][:description] == current_version[:description]
 
           status = nil
           if is_proposed
@@ -156,7 +156,7 @@ module Spaceship
                   "id" => current_version[:id]
               }
           }
-        end
+        }
 
         raw_data.set(["versions"], [{
                                         "reviewNotes" => { value: @review_notes },
