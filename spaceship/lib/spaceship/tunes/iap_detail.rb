@@ -113,20 +113,31 @@ module Spaceship
           is_active = active_versions.key?(language)
 
           next if is_active &&
-                  active_versions[language][:name] == current_version[:name] &&
-                  active_versions[language][:description] == current_version[:description]
+              active_versions[language][:name] == current_version[:name] &&
+              active_versions[language][:description] == current_version[:description]
 
           new_versions << {
-              "value" => {
-                  "name" => { "value" => current_version[:name] },
-                  "description" => { "value" => current_version[:description] },
-                  "localeCode" => language.to_s,
-                  "publicationName" => nil,
-                  "status" => is_proposed ? proposed_versions[language][:status] : nil,
-                  "id" => is_proposed ? proposed_versions[language][:id] : nil
-              }
+              id: is_proposed ? proposed_versions[language][:id] : nil,
+              locale_code: language,
+              name: current_version[:name],
+              description: current_version[:description],
+              status: is_proposed ? proposed_versions[language][:status] : nil,
+              publication_name: nil
           }
         end
+
+        new_versions = new_versions.map { |current_version|
+          {
+              "value" => {
+                  "name" => {"value" => current_version[:name]},
+                  "description" => {"value" => current_version[:description]},
+                  "localeCode" => current_version[:locale_code],
+                  "publicationName" => nil,
+                  "status" => current_version[:status],
+                  "id" => current_version[:id]
+              }
+          }
+        }
 
         raw_data.set(["versions"], [{
           "reviewNotes" => { value: @review_notes },
