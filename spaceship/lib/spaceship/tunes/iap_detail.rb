@@ -258,6 +258,8 @@ module Spaceship
         raw_data.set(["pricingIntervals"], raw_pricing_intervals)
         @raw_pricing_data["subscriptions"] = raw_pricing_intervals if @raw_pricing_data
 
+        raw_data["versions"][0]["reviewNotes"] = { value: @review_notes }
+
         if @review_screenshot
           # Upload Screenshot
           upload_file = UploadFile.from_path(@review_screenshot)
