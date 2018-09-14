@@ -300,14 +300,6 @@ module Spaceship
         end
       end
 
-      def delete_addon!(addon)
-        client.delete_addon!(apple_id, addon)
-      end
-
-      def submit_addons!(addons)
-        client.submit_addons!(apple_id, addons)
-      end
-
       #####################################################
       # @!group Builds
       #####################################################

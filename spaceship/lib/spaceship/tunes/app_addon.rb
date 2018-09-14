@@ -71,20 +71,10 @@ module Spaceship
         end
       end
 
-      # Delete current addon
-      def delete!
-        client.delete_addon!(self)
-      end
-
       # Return true if this addon can be submitted
       def can_submit?
         return false if addon_type == "ITC.addons.type.freeSubscription"
         !!versions.find { |version| version['canSubmit'] }
-      end
-
-      # Submit iap addon
-      def submit!
-        client.submit_addons!(application.apple_id, [raw_data])
       end
 
       # @return (String) Human Readable type of the purchase

@@ -1343,24 +1343,6 @@ module Spaceship
       parse_response(r, 'data')
     end
 
-    def delete_addon!(addon)
-      url = "ra/addons/delete/#{addon.addon_id}"
-      r = request(:post) do |req|
-        req.url(url)
-      end
-      parse_response(r)
-    end
-
-    def submit_addons!(app_id, addons)
-      url = "ra/apps/#{app_id}/iaps/submission"
-      r = request(:post) do |req|
-        req.url(url)
-        req.body = addons.to_json
-        req.headers['Content-Type'] = 'application/json'
-      end
-      parse_response(r)
-    end
-
     #####################################################
     # @!group Sandbox Testers
     #####################################################
