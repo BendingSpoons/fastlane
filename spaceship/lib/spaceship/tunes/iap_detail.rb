@@ -84,6 +84,10 @@ module Spaceship
         all_versions('proposed')
       end
 
+      def rejected_versions
+        all_versions('rejected')
+      end
+
       # It overrides the proposed version to the active (currently on the store) version
 
       # @return (Hash) Hash of languages
@@ -109,6 +113,7 @@ module Spaceship
 
         value.each do |language, current_version|
           language = language.to_sym
+          is_rejected = rejected_versions.key?(language)
           is_proposed = proposed_versions.key?(language)
           is_active = active_versions.key?(language)
 
@@ -116,12 +121,18 @@ module Spaceship
               active_versions[language][:name] == current_version[:name] &&
               active_versions[language][:description] == current_version[:description]
 
+          status = is_proposed ? proposed_versions[language][:status] : nil
+          status = is_rejected ? rejected_versions[language][:status] : nil
+
+          id = is_proposed ? proposed_versions[language][:id] : nil
+          id = is_rejected ? rejected_versions[language][:id] : nil
+          
           new_versions << {
-              id: is_proposed ? proposed_versions[language][:id] : nil,
+              id: id,
               locale_code: language,
               name: current_version[:name],
               description: current_version[:description],
-              status: is_proposed ? proposed_versions[language][:status] : nil,
+              status: status,
               publication_name: nil
           }
         end
