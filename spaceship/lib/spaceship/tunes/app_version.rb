@@ -306,6 +306,18 @@ module Spaceship
         end
       end
 
+      # @param selected_addons List of addons IDs selected for the review
+      # Don't forget to call save! after calling this method
+      def select_addons(selected_addons=[])
+        addons = self.addons
+
+        addons.each do |addon|
+          addon.can_submit_in_the_next_version = (selected_addons.include? addon.vendor_id and addon.can_submit?)
+        end
+
+        raw_data.set(['submittableAddOns', 'value'], addons.map { |addon| addon.raw_data })
+      end
+
       # Call this method to make sure the given languages are available for this app
       # You should call this method before accessing the name, description and other localized values
       # This will create the new language if it's not available yet and do nothing if everything's there
