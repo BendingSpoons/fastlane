@@ -49,14 +49,14 @@ module Spaceship
       attr_accessor :subscription_pricing
 
       attr_mapping({
-        'adamId' => :purchase_id,
-        'referenceName.value' => :reference_name,
-        'productId.value' => :product_id,
-        'isNewsSubscription' => :is_news_subscription,
-        'pricingDurationType.value' => :subscription_duration,
-        'freeTrialDurationType.value' => :subscription_free_trial,
-        'clearedForSale.value' => :cleared_for_sale
-      })
+                       'adamId' => :purchase_id,
+                       'referenceName.value' => :reference_name,
+                       'productId.value' => :product_id,
+                       'isNewsSubscription' => :is_news_subscription,
+                       'pricingDurationType.value' => :subscription_duration,
+                       'freeTrialDurationType.value' => :subscription_free_trial,
+                       'clearedForSale.value' => :cleared_for_sale
+                   })
 
       def setup
         @raw_pricing_data = @raw_data["pricingData"]
@@ -118,15 +118,23 @@ module Spaceship
           is_active = active_versions.key?(language)
 
           next if is_active &&
-              active_versions[language][:name] == current_version[:name] &&
-              active_versions[language][:description] == current_version[:description]
+                  active_versions[language][:name] == current_version[:name] &&
+                  active_versions[language][:description] == current_version[:description]
 
-          status = is_proposed ? proposed_versions[language][:status] : nil
-          status = is_rejected ? rejected_versions[language][:status] : nil
+          status = nil
+          if is_proposed
+            status = proposed_versions[language][:status]
+          elsif is_rejected
+            status = rejected_versions[language][:status]
+          end
 
-          id = is_proposed ? proposed_versions[language][:id] : nil
-          id = is_rejected ? rejected_versions[language][:id] : nil
-          
+          id = nil
+          if is_proposed
+            id = proposed_versions[language][:id]
+          elsif is_rejected
+            id = rejected_versions[language][:id]
+          end
+
           new_versions << {
               id: id,
               locale_code: language,
@@ -137,27 +145,27 @@ module Spaceship
           }
         end
 
-        new_versions = new_versions.map { |current_version|
+        new_versions = new_versions.map do |current_version|
           {
               "value" => {
-                  "name" => {"value" => current_version[:name]},
-                  "description" => {"value" => current_version[:description]},
+                  "name" => { "value" => current_version[:name] },
+                  "description" => { "value" => current_version[:description] },
                   "localeCode" => current_version[:locale_code],
                   "publicationName" => nil,
                   "status" => current_version[:status],
                   "id" => current_version[:id]
               }
           }
-        }
+        end
 
         raw_data.set(["versions"], [{
-          "reviewNotes" => { value: @review_notes },
-          "contentHosting" => raw_data['versions'].first['contentHosting'],
-          "details" => { "value" => new_versions },
-          "id" => raw_data["versions"].first["id"],
-          "reviewScreenshot" => { "value" => review_screenshot },
-          "merch" => raw_data["versions"].first["merch"]
-        }])
+                                        "reviewNotes" => { value: @review_notes },
+                                        "contentHosting" => raw_data['versions'].first['contentHosting'],
+                                        "details" => { "value" => new_versions },
+                                        "id" => raw_data["versions"].first["id"],
+                                        "reviewScreenshot" => { "value" => review_screenshot },
+                                        "merch" => raw_data["versions"].first["merch"]
+                                    }])
       end
 
       # transforms user-set intervals to iTC ones
@@ -165,13 +173,13 @@ module Spaceship
         new_intervals = []
         value.each do |current_interval|
           new_intervals << {
-            "value" => {
-              "tierStem" =>  current_interval[:tier],
-              "priceTierEndDate" =>  current_interval[:end_date],
-              "priceTierEffectiveDate" =>  current_interval[:begin_date],
-              "grandfathered" =>  current_interval[:grandfathered],
-              "country" => current_interval[:country]
-            }
+              "value" => {
+                  "tierStem" => current_interval[:tier],
+                  "priceTierEndDate" => current_interval[:end_date],
+                  "priceTierEffectiveDate" => current_interval[:begin_date],
+                  "grandfathered" => current_interval[:grandfathered],
+                  "country" => current_interval[:country]
+              }
           }
         end
         raw_data.set(["pricingIntervals"], new_intervals)
@@ -193,11 +201,11 @@ module Spaceship
       def pricing_intervals
         @pricing_intervals ||= (raw_data["pricingIntervals"] || @raw_pricing_data["subscriptions"] || []).map do |interval|
           {
-            tier: interval["value"]["tierStem"].to_i,
-            begin_date: interval["value"]["priceTierEffectiveDate"],
-            end_date: interval["value"]["priceTierEndDate"],
-            grandfathered: interval["value"]["grandfathered"],
-            country: interval["value"]["country"]
+              tier: interval["value"]["tierStem"].to_i,
+              begin_date: interval["value"]["priceTierEffectiveDate"],
+              end_date: interval["value"]["priceTierEndDate"],
+              grandfathered: interval["value"]["grandfathered"],
+              country: interval["value"]["country"]
           }
         end
       end
@@ -207,15 +215,15 @@ module Spaceship
         new_intro_offers = []
         value.each do |current_intro_offer|
           new_intro_offers << {
-            "value" => {
-              "country" => current_intro_offer[:country],
-              "durationType" => current_intro_offer[:duration_type],
-              "startDate" => current_intro_offer[:start_date],
-              "endDate" => current_intro_offer[:end_date],
-              "numOfPeriods" => current_intro_offer[:num_of_periods],
-              "offerModeType" => current_intro_offer[:offer_mode_type],
-              "tierStem" => current_intro_offer[:tier_stem]
-            }
+              "value" => {
+                  "country" => current_intro_offer[:country],
+                  "durationType" => current_intro_offer[:duration_type],
+                  "startDate" => current_intro_offer[:start_date],
+                  "endDate" => current_intro_offer[:end_date],
+                  "numOfPeriods" => current_intro_offer[:num_of_periods],
+                  "offerModeType" => current_intro_offer[:offer_mode_type],
+                  "tierStem" => current_intro_offer[:tier_stem]
+              }
           }
         end
         @subscription_pricing.raw_data.set(['introOffers'], new_intro_offers)
@@ -262,10 +270,11 @@ module Spaceship
       # Saves the current In-App-Purchase
       def save!
         # transform pricingDetails
-        raw_pricing_intervals =
-          client.transform_to_raw_pricing_intervals(application.apple_id,
-                                                    self.purchase_id, pricing_intervals,
-                                                    subscription_price_target)
+        raw_pricing_intervals = client.transform_to_raw_pricing_intervals(
+          application.apple_id,
+          self.purchase_id, pricing_intervals,
+          subscription_price_target
+        )
         raw_data.set(["pricingIntervals"], raw_pricing_intervals)
         @raw_pricing_data["subscriptions"] = raw_pricing_intervals if @raw_pricing_data
 
@@ -308,7 +317,7 @@ module Spaceship
         # Update pricing for a recurring subscription.
         if @raw_data["addOnType"] == Spaceship::Tunes::IAPType::RECURRING
           client.update_recurring_iap_pricing!(app_id: application.apple_id, purchase_id: self.purchase_id,
-                                                             pricing_intervals: raw_data["pricingIntervals"])
+                                               pricing_intervals: raw_data["pricingIntervals"])
 
           client.update_recurring_iap_pricing_intro_offers!(app_id: application.apple_id, purchase_id: self.purchase_id,
                                                             intro_offers: self.subscription_pricing.raw_data["introOffers"])
