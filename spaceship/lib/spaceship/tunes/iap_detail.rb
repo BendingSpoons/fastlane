@@ -118,8 +118,22 @@ module Spaceship
           is_active = active_versions.key?(language)
 
           next if is_active &&
-              active_versions[language][:name] == current_version[:name] &&
-              active_versions[language][:description] == current_version[:description]
+                  active_versions[language][:name] == current_version[:name] &&
+                  active_versions[language][:description] == current_version[:description]
+
+          status = nil
+          if is_proposed
+            status = proposed_versions[language][:status]
+          elsif is_rejected
+            status = rejected_versions[language][:status]
+          end
+
+          id = nil
+          if is_proposed
+            id = proposed_versions[language][:id]
+          elsif is_rejected
+            id = rejected_versions[language][:id]
+          end
 
           status = nil
           if is_proposed
@@ -156,7 +170,7 @@ module Spaceship
                   "id" => current_version[:id]
               }
           }
-        }
+        end
 
         raw_data.set(["versions"], [{
                                         "reviewNotes" => { value: @review_notes },
@@ -206,6 +220,7 @@ module Spaceship
               end_date: interval["value"]["priceTierEndDate"],
               grandfathered: interval["value"]["grandfathered"],
               country: interval["value"]["country"]
+<<<<<<< HEAD
           }
         end
       end
@@ -241,6 +256,8 @@ module Spaceship
               num_of_periods: intro_offer["value"]["numOfPeriods"],
               offer_mode_type: intro_offer["value"]["offerModeType"],
               tier_stem: intro_offer["value"]["tierStem"]
+=======
+>>>>>>> Fix rubocop and tests
           }
         end
       end
@@ -250,15 +267,15 @@ module Spaceship
         new_intro_offers = []
         value.each do |current_intro_offer|
           new_intro_offers << {
-            "value" => {
-              "country" => current_intro_offer[:country],
-              "durationType" => current_intro_offer[:duration_type],
-              "startDate" => current_intro_offer[:start_date],
-              "endDate" => current_intro_offer[:end_date],
-              "numOfPeriods" => current_intro_offer[:num_of_periods],
-              "offerModeType" => current_intro_offer[:offer_mode_type],
-              "tierStem" => current_intro_offer[:tier_stem]
-            }
+              "value" => {
+                  "country" => current_intro_offer[:country],
+                  "durationType" => current_intro_offer[:duration_type],
+                  "startDate" => current_intro_offer[:start_date],
+                  "endDate" => current_intro_offer[:end_date],
+                  "numOfPeriods" => current_intro_offer[:num_of_periods],
+                  "offerModeType" => current_intro_offer[:offer_mode_type],
+                  "tierStem" => current_intro_offer[:tier_stem]
+              }
           }
         end
         @subscription_pricing.raw_data.set(['introOffers'], new_intro_offers)
