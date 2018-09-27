@@ -53,14 +53,14 @@ module Spaceship
       attr_accessor :subscription_pricing
 
       attr_mapping({
-        'adamId' => :purchase_id,
-        'referenceName.value' => :reference_name,
-        'productId.value' => :product_id,
-        'isNewsSubscription' => :is_news_subscription,
-        'pricingDurationType.value' => :subscription_duration,
-        'freeTrialDurationType.value' => :subscription_free_trial,
-        'clearedForSale.value' => :cleared_for_sale
-      })
+                       'adamId' => :purchase_id,
+                       'referenceName.value' => :reference_name,
+                       'productId.value' => :product_id,
+                       'isNewsSubscription' => :is_news_subscription,
+                       'pricingDurationType.value' => :subscription_duration,
+                       'freeTrialDurationType.value' => :subscription_free_trial,
+                       'clearedForSale.value' => :cleared_for_sale
+                   })
 
       def setup
         @raw_pricing_data = @raw_data["pricingData"]
@@ -194,11 +194,11 @@ module Spaceship
       def pricing_intervals
         @pricing_intervals ||= (raw_data["pricingIntervals"] || @raw_pricing_data["subscriptions"] || []).map do |interval|
           {
-            tier: interval["value"]["tierStem"].to_i,
-            begin_date: interval["value"]["priceTierEffectiveDate"],
-            end_date: interval["value"]["priceTierEndDate"],
-            grandfathered: interval["value"]["grandfathered"],
-            country: interval["value"]["country"]
+              tier: interval["value"]["tierStem"].to_i,
+              begin_date: interval["value"]["priceTierEffectiveDate"],
+              end_date: interval["value"]["priceTierEndDate"],
+              grandfathered: interval["value"]["grandfathered"],
+              country: interval["value"]["country"]
           }
         end
       end
@@ -338,7 +338,7 @@ module Spaceship
         # Update pricing for a recurring subscription.
         if @raw_data["addOnType"] == Spaceship::Tunes::IAPType::RECURRING
           client.update_recurring_iap_pricing!(app_id: application.apple_id, purchase_id: self.purchase_id,
-                                                             pricing_intervals: raw_data["pricingIntervals"])
+                                               pricing_intervals: raw_data["pricingIntervals"])
 
           client.update_recurring_iap_pricing_intro_offers!(app_id: application.apple_id, purchase_id: self.purchase_id,
                                                             intro_offers: self.subscription_pricing.raw_data["introOffers"])
