@@ -165,6 +165,10 @@ module Spaceship
         Tunes::AppRatings.new(attrs)
       end
 
+      def create_developer_response(review_id, text)
+        client.create_developer_response!(app_id: apple_id, platform: platform, review_id: review_id, response: text)
+      end
+
       def platforms
         platforms = []
         version_sets.each do |version_set|
