@@ -379,6 +379,7 @@ module Spaceship
           responseText: response,
           reviewId: review_id
       }
+
       request(:post) do |req|
         req.url("ra/apps/#{app_id}/platforms/#{platform}/reviews/#{review_id}/responses")
         req.body = data.to_json
