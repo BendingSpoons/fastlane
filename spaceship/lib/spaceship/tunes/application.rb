@@ -169,6 +169,10 @@ module Spaceship
         client.create_developer_response!(app_id: apple_id, platform: platform, review_id: review_id, response: text)
       end
 
+      def update_developer_response(review_id, response_id, updated_text)
+        client.update_developer_response!(app_id: apple_id, platform: platform, review_id: review_id, response_id: response_id, response: updated_text)
+      end
+
       def platforms
         platforms = []
         version_sets.each do |version_set|
