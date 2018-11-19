@@ -367,7 +367,7 @@ module Spaceship
       rating_url << "&version_id=#{version_id}" unless version_id.empty?
 
       r = request(:get, rating_url)
-      parse_response(r, 'data')['reviews']
+      parse_response(r, 'data')
     end
 
     def create_developer_response!(app_id: nil, platform: "ios", review_id: nil, response: nil)
