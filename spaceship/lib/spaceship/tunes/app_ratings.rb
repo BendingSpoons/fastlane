@@ -47,25 +47,6 @@ module Spaceship
           (four_star_rating_count * 4) +
           (five_star_rating_count * 5)) / rating_count.to_f).round(2)
       end
-
-      # @return (Array) of Review Objects
-      def reviews(store_front = '', version_id = '', page = 0, sort = 'REVIEW_SORT_ORDER_MOST_RECENT')
-        raw_reviews = client.get_reviews(application.apple_id, application.platform, store_front, version_id, page, sort, reviews_per_page)
-        reviews = raw_reviews['reviews'].map do |review|
-          review["value"]["application"] = self.application
-          AppReview.factory(review["value"])
-        end
-
-        {
-            count: raw_reviews['reviewCount'],
-            reviews: reviews
-        }
-      end
-
-      # Apple default
-      def reviews_per_page
-        100
-      end
     end
 
     class DeveloperResponse < TunesBase
