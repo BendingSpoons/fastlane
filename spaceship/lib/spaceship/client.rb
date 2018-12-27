@@ -576,6 +576,9 @@ module Spaceship
         puts("Continuing with normal login.")
       end
       return false
+    rescue => ex
+      puts(ex.to_s)
+      raise BasicPreferredInfoError.new, "Error loading session from #{persistent_cookie_path}"
     end
 
     def load_session_from_env
