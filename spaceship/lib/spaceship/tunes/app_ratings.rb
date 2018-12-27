@@ -30,7 +30,7 @@ module Spaceship
       attr_accessor :review_per_page
 
       attr_mapping({
-	'reviewCount' => :review_count,
+        'reviewCount' => :review_count,
         'ratingCount' => :rating_count,
         'ratingOneCount' => :one_star_rating_count,
         'ratingTwoCount' => :two_star_rating_count,
@@ -46,6 +46,15 @@ module Spaceship
           (three_star_rating_count * 3) +
           (four_star_rating_count * 4) +
           (five_star_rating_count * 5)) / rating_count.to_f).round(2)
+      end
+
+      # @return (Array) of Review Objects
+      def reviews(store_front = '', version_id = '', upto_date = nil)
+        raw_reviews = client.get_reviews(application.apple_id, application.platform, store_front, version_id)['reviews']
+        raw_reviews.map do |review|
+          review["value"]["application"] = self.application
+          AppReview.factory(review["value"])
+        end
       end
     end
 
