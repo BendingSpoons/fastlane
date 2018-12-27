@@ -1,0 +1,9 @@
+language: ruby
+rvm:
+  - 2.3.7
+
+install:
+  - bundle install
+
+script:
+  - bundle exec fastlane validate-repo
