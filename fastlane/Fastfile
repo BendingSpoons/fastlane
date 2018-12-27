@@ -14,7 +14,7 @@ desc "Verifies all tests pass and the current state of the repo is valid"
 lane :validate_repo do
   lint_source
   execute_tests
-  validate_docs
+  # validate_docs
   ensure_tool_name_formatting
   ensure_code_samples
   ensure_special_docs_code_samples
