@@ -17,9 +17,15 @@ module Spaceship
       # @return (String)
       attr_accessor :platform
 
+      attr_accessor :in_flight_version
+
+      attr_accessor :deliverable_version
+
       attr_mapping(
         'type' => :type,
-        'platformString' => :platform
+        'platformString' => :platform,
+        'inFlightVersion' => :in_flight_version,
+        'deliverableVersion' => :deliverable_version
       )
     end
   end
