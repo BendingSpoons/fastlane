@@ -17,8 +17,10 @@ module Spaceship
       # @return (String)
       attr_accessor :platform
 
+      # @return (Hash) The metadata of the in-flight version of the application
       attr_accessor :in_flight_version
 
+      # @return (Hash) The metadata of the deliverable version of the application
       attr_accessor :deliverable_version
 
       attr_mapping(
