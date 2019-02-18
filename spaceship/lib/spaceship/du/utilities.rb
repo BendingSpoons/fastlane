@@ -32,6 +32,7 @@ module Spaceship
     # Supports all video and images required by DU-UTC right now
     # @param path (String) the path to the file
     def portrait?(path)
+      puts("Attempting to determine whether #{path} is portrait")
       resolution = resolution(path)
       resolution[0] < resolution[1]
     end
@@ -42,12 +43,13 @@ module Spaceship
     # @param dimensions (Array) the dimension of the screenshot to generate
     # @return the TempFile containing the generated screenshot
     def grab_video_preview(video_path, timestamp, dimensions)
+      puts("Attempting to grab video preview for #{video_path}, timestamp #{timestamp}, dimensions: #{dimensions}")
       width, height = dimensions
       require 'tempfile'
       tmp = Tempfile.new(['video_preview', ".jpg"])
       file = tmp.path
       command = "ffmpeg -y -i \"#{video_path}\" -s #{width}x#{height} -ss \"#{timestamp}\" -vframes 1 \"#{file}\" 2>&1 >/dev/null"
-      # puts "COMMAND: #{command}"
+      puts("COMMAND: #{command}")
       `#{command}`
       raise "Failed to grab screenshot at #{timestamp} from #{video_path} (using #{command})" unless $CHILD_STATUS.to_i == 0
       tmp
@@ -57,17 +59,21 @@ module Spaceship
     # @param video_path (String) the path to the video file
     # @return [Array] the resolution of the video
     def video_resolution(video_path)
+      puts("Attempting to determine video resolution for #{video_path}")
       command = "ffmpeg -i \"#{video_path}\" 2>&1"
-      # puts "COMMAND: #{command}"
+      puts("COMMAND: #{command}")
       output = `#{command}`
       # Note: ffmpeg exits with 1 if no output specified
       # raise "Failed to find video information from #{video_path} (using #{command})" unless $CHILD_STATUS.to_i == 0
       output = output.force_encoding("BINARY")
       video_infos = output.split("\n").select { |l| l =~ /Stream.*Video/ }
       raise "Unable to find Stream Video information from ffmpeg output of #{command}" if video_infos.count == 0
+      puts("Video info: #{video_infos}")
       video_info = video_infos[0]
       res = video_info.match(/.* ([0-9]+)x([0-9]+).*/)
+      puts("Found resolution: #{res}")
       raise "Unable to parse resolution information from #{video_info}" if res.size < 3
+      puts("Returning the following resolution info: #{res[1]}, #{res[2]}")
       [res[1].to_i, res[2].to_i]
     end
 
