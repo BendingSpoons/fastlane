@@ -365,7 +365,7 @@ module Spaceship
 
     def get_reviews(app_id, platform, storefront, version_id, page = 0, sort = 'REVIEW_SORT_ORDER_MOST_RECENT')
       per_page = 100 # apple default
-      
+
       index = page * per_page
       rating_url = "ra/apps/#{app_id}/platforms/#{platform}/reviews?"
       rating_url << "sort=#{sort}"
