@@ -167,8 +167,7 @@ module Spaceship
 
       # @return (Array) of Review Objects
       def reviews(store_front = '', version_id = '', page = 0, sort = 'REVIEW_SORT_ORDER_MOST_RECENT')
-        reviews_per_page = 100
-        raw_reviews = client.get_reviews(apple_id, platform, store_front, version_id, page, sort, reviews_per_page)
+        raw_reviews = client.get_reviews(apple_id, platform, store_front, version_id, page, sort)
         {
             count: raw_reviews['reviewCount'],
             reviews: raw_reviews['reviews'].map do |review|
