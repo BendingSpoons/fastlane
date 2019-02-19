@@ -8,4 +8,4 @@ install:
   - bundle install
 
 script:
-  - bundle exec fastlane validate-repo
+  - bundle exec fastlane validate_repo
