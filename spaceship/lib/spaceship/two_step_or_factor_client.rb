@@ -3,6 +3,11 @@ require_relative 'tunes/tunes_client'
 
 module Spaceship
   class Client
+
+    PASSEPARTOUT_INITIAL_WAIT = 60
+    PASSEPARTOUT_RETRY_WAIT = 10
+    PASSEPARTOUT_RETRY_ATTEMPTS = 10
+
     def handle_two_step_or_factor(response)
       # extract `x-apple-id-session-id` and `scnt` from response, to be used by `update_request_headers`
       @x_apple_id_session_id = response["x-apple-id-session-id"]
@@ -101,14 +106,27 @@ module Spaceship
     end
 
     def handle_two_factor(response, depth = 0)
+      # Control automation
+      use_passepartout = ENV['PASSEPARTOUT_ENABLED']
+      passepartout_url = ENV["PASSEPARTOUT_URL"]
+      passepartout_phone_number = ENV["PASSEPARTOUT_PHONE_NUMBER"]
+
+      raise("Passepartout enabled, but either the URL or the phone number are missing! Aborting!") if
+          use_passepartout && (passepartout_phone_number.nil? || passepartout_url.nil?)
+
       if depth == 0
         puts("Two-factor Authentication (6 digits code) is enabled for account '#{self.user}'")
         puts("More information about Two-factor Authentication: https://support.apple.com/en-us/HT204915")
         puts("")
 
-        two_factor_url = "https://github.com/fastlane/fastlane/tree/master/spaceship#2-step-verification"
-        puts("If you're running this in a non-interactive session (e.g. server or CI)")
-        puts("check out #{two_factor_url}")
+        if use_passepartout
+          puts("This is running in non-interactive mode, calling Passepartout for 2FA validation at #{passepartout_url}")
+        else
+          two_factor_url = "https://github.com/fastlane/fastlane/tree/master/spaceship#2-step-verification"
+          puts("If you're running this in a non-interactive session (e.g. server or CI)")
+          puts("check out #{two_factor_url}")
+        end
+
       end
 
       # "verification code" has already be pushed to devices
@@ -122,16 +140,23 @@ module Spaceship
       # },
       code_length = security_code["length"]
 
-      puts("")
-      puts("(Input `sms` to escape this prompt and select a trusted phone number to send the code as a text message)")
-      code_type = 'trusteddevice'
-      code = ask("Please enter the #{code_length} digit code:")
-      body = { "securityCode" => { "code" => code.to_s } }.to_json
+      if use_passepartout
+        puts("Using `sms` authentication, sending the code as a text message to the trusted phone number #{passepartout_phone_number}")
+        code = 'sms'
+      else
+        puts("(Input `sms` to escape this prompt and select a trusted phone number to send the code as a text message)")
+        code_type = 'trusteddevice'
+        code = ask("Please enter the #{code_length} digit code:")
+        body = { "securityCode" => { "code" => code.to_s } }.to_json
+      end
 
       if code == 'sms'
         code_type = 'phone'
-        body = request_two_factor_code_from_phone(response.body["trustedPhoneNumbers"], code_length)
+        body = request_two_factor_code_from_phone(response.body["trustedPhoneNumbers"], code_length, use_passepartout, 
+                                                  passepartout_url, passepartout_phone_number)
       end
+
+      puts("")
 
       puts("Requesting session...")
 
@@ -177,17 +202,23 @@ module Spaceship
         phone_id = phone['id']
         return phone_id if phone['numberWithDialCode'] == result
       end
+      nil
     end
 
-    def request_two_factor_code_from_phone(phone_numbers, code_length)
-      puts("Please select a trusted phone number to send code to:")
-
-      available = phone_numbers.collect do |current|
-        current['numberWithDialCode']
+    def request_two_factor_code_from_phone(phone_numbers, code_length, use_passepartout, passepartout_url = nil,
+                                           passepartout_phone_number = nil)
+      if use_passepartout
+        result = passepartout_phone_number
+      else
+        puts("Please select a trusted phone number to send code to:")
+        available = phone_numbers.collect do |current|
+          current['numberWithDialCode']
+        end
+        result = choose(*available)
       end
-      result = choose(*available)
 
       phone_id = get_id_for_number(phone_numbers, result)
+      raise("The phone number you specified is not a trusted phone number for this account, aborting!") if phone_id.nil?
 
       # Request code
       r = request(:put) do |req|
@@ -201,27 +232,35 @@ module Spaceship
       # since this might be from the Dev Portal, but for 2 step
       Spaceship::TunesClient.new.handle_itc_response(r.body)
 
-      puts("Successfully requested text message. Sleeping for 60 seconds...")
+      if use_passepartout
+        # Instead of asking for the code, we'll enter a request loop attempting to fetch it from the servers
+        puts("Successfully requested text message. Sleeping for #{PASSEPARTOUT_INITIAL_WAIT} seconds...")
 
-      # Instead of asking for the code, we'll enter a request loop attempting to fetch it from the servers
-      sleep(60)
-      code = nil
-      attempts = 0
-      max_attempts = 10
+        code = nil
+        attempts = 0
+        sleep(PASSEPARTOUT_INITIAL_WAIT)
 
-      while code.nil? && attempts < max_attempts do
-        puts "Calling passepartout..."
-        response = request(:get, "http://localhost:5010/messages/")
-        body = response.body
-        if body
-          code = body["token"]
-          puts "Passepartout answered with code: #{code}"
+        while code.nil? && attempts < PASSEPARTOUT_RETRY_ATTEMPTS do
+          puts("Calling passepartout, attempt #{attempts + 1}...")
+          response = request(:get, passepartout_url)
+          if response.body
+            code = response.body["token"]
+            if code.nil?
+              puts("Passepartout doesn't have a code yet, waiting for #{PASSEPARTOUT_RETRY_WAIT} seconds...")
+              sleep(PASSEPARTOUT_RETRY_WAIT)
+              attempts += 1
+            end
+          end
         end
-        sleep(10)
-        attempts += 1
+
+        raise("Unable to get a security code from Apple after #{max_attempts} attempts. Aborting!") if code.nil?
+        puts("Passepartout answered with code: #{code}")
+      else
+        code = ask("Please enter the #{code_length} digit code you received at #{result}:")
       end
 
       { "securityCode" => { "code" => code.to_s }, "phoneNumber" => { "id" => phone_id }, "mode" => "sms" }.to_json
+    
     end
 
     def store_session
