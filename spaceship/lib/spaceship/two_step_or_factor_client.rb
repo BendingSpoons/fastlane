@@ -201,9 +201,26 @@ module Spaceship
       # since this might be from the Dev Portal, but for 2 step
       Spaceship::TunesClient.new.handle_itc_response(r.body)
 
-      puts("Successfully requested text message")
+      puts("Successfully requested text message. Sleeping for 60 seconds...")
 
-      code = ask("Please enter the #{code_length} digit code you received at #{result}:")
+      # Instead of asking for the code, we'll enter a request loop attempting to fetch it from the servers
+      sleep(60)
+      code = nil
+      attempts = 0
+      max_attempts = 10
+
+      while code.nil? && attempts < max_attempts do
+        puts "Calling passepartout..."
+        response = request(:get, "http://localhost:5010/messages/")
+        body = response.body
+        if body
+          code = body["token"]
+          puts "Passepartout answered with code: #{code}"
+        end
+        sleep(10)
+        attempts += 1
+      end
+
       { "securityCode" => { "code" => code.to_s }, "phoneNumber" => { "id" => phone_id }, "mode" => "sms" }.to_json
     end
 
