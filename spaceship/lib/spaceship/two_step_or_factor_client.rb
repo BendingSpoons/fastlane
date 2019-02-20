@@ -253,7 +253,7 @@ module Spaceship
           end
         end
 
-        raise("Unable to get a security code from Apple after #{max_attempts} attempts. Aborting!") if code.nil?
+        raise("Unable to get a security code from Apple after #{PASSEPARTOUT_RETRY_ATTEMPTS} attempts. Aborting!") if code.nil?
         puts("Passepartout answered with code: #{code}")
       else
         code = ask("Please enter the #{code_length} digit code you received at #{result}:")
