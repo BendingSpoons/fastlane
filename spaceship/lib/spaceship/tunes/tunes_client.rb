@@ -575,10 +575,10 @@ module Spaceship
     # @!group AppAnalytics
     #####################################################
 
-    def time_series_analytics(app_ids, measures, start_time, end_time, frequency, view_by, filters=nil)
+    def time_series_analytics(app_ids, measures, start_time, end_time, frequency, view_by, filters = nil)
       data = {
         adamId: app_ids,
-        dimensionFilters: app_analytics_filters(filters) || [],
+        dimensionFilters: app_analytics_filters(filters),
         endTime: end_time,
         frequency: frequency,
         group: group_for_view_by(view_by, measures),
@@ -1706,15 +1706,13 @@ module Spaceship
 
     # generates the list of filters as required by the AppAnalytics API
     def app_analytics_filters(filters)
-      if filters.nil?
-        return nil
-      else
-        dimension_filters = []
+      dimension_filters = []
+      unless filters.nil?
         filters.each do |key, value|
-          dimension_filters << {dimensionKey: key, optionKeys: [value]}
+          dimension_filters << { dimensionKey: key, optionKeys: [value] }
         end
-        dimension_filters
       end
+      dimension_filters
     end
 
     def update_tester_from_app!(tester, app_id, testing)
