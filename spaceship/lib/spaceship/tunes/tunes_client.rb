@@ -464,11 +464,11 @@ module Spaceship
       parse_response(r, 'data')
     end
 
-    def update_app_version!(app_id, version_id, data)
+    def update_app_version!(app_id, version_id, data, tries = 5, potential_server_error_tries = 3)
       raise "app_id is required" unless app_id
       raise "version_id is required" unless version_id.to_i > 0
 
-      with_tunes_retry do
+      with_tunes_retry(tries, potential_server_error_tries) do
         r = request(:post) do |req|
           req.url("ra/apps/#{app_id}/platforms/ios/versions/#{version_id}")
           req.body = data.to_json
