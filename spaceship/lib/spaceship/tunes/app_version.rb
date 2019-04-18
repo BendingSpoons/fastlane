@@ -416,8 +416,8 @@ module Spaceship
       end
 
       # Push all changes that were made back to App Store Connect
-      def save!
-        client.update_app_version!(application.apple_id, self.version_id, raw_data)
+      def save!(tries: 5, potential_server_error_tries: 3)
+        client.update_app_version!(application.apple_id, self.version_id, raw_data, tries, potential_server_error_tries)
       end
 
       # @return (String) An URL to this specific resource. You can enter this URL into your browser
