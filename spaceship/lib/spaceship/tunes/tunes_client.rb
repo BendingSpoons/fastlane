@@ -1229,6 +1229,16 @@ module Spaceship
       parse_response(r)
     end
 
+    def generate_shared_secret!(app_id)
+      url = "ra/apps/#{app_id}/iaps/appSharedSecret"
+      r = request(:post) do |req|
+        req.url(url)
+        req.body = nil
+        req.headers['Content-Type'] = 'application/json'
+      end
+      parse_response(r, 'data')
+    end
+
     # Loads the full In-App-Purchases
     def load_iap(app_id: nil, purchase_id: nil)
       r = request(:get, "ra/apps/#{app_id}/iaps/#{purchase_id}")
