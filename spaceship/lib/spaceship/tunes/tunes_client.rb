@@ -1219,7 +1219,7 @@ module Spaceship
       handle_itc_response(r)
     end
 
-    def submit_iap!(app_id, iap_addons)
+    def submit_iaps!(app_id, iap_addons)
       url = "ra/apps/#{app_id}/iaps/submission"
       r = request(:post) do |req|
         req.url(url)
