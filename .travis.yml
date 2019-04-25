@@ -4,6 +4,9 @@ osx_image: xcode10.2
 rvm:
   - 2.3.7
 
+before_install:
+  - sudo apt-get install -y npm
+
 install:
   - bundle install
 
