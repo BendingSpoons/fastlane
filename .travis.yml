@@ -6,6 +6,7 @@ rvm:
 
 before_install:
   - sudo apt-get install -y npm
+  - npm config set strict-ssl false
 
 install:
   - bundle install
