@@ -621,7 +621,7 @@ describe Spaceship::AppVersion, all: true do
 
       it "works with valid update data" do
         TunesStubbing.itc_stub_valid_update
-        expect(client).to receive(:update_app_version!).with('898536088', 812_106_519, version.raw_data)
+        expect(client).to receive(:update_app_version!).with('898536088', 812_106_519, version.raw_data, 5, 3)
         version.save!
       end
 
