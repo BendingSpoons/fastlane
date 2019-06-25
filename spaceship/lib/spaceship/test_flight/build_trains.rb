@@ -21,6 +21,9 @@ module Spaceship::TestFlight
 
       loop do
         builds_resp = client.get_builds(filter: { app: app_id, processingState: "VALID,PROCESSING,FAILED,INVALID" }, limit: 100, sort: "uploadedDate", includes: "preReleaseVersion,app", cursor: cursor)
+        # NOTE (BSP): this is necessary because Fastlane forgot to update the API, and the call is now returning a ConnectAPI.Response
+        # object instead of its body, so we need to unwrap it here!
+        builds_resp = builds_resp.body
         builds += builds_resp["data"]
         included += (builds_resp["included"] || [])
 
