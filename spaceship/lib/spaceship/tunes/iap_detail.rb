@@ -135,20 +135,6 @@ module Spaceship
             id = rejected_versions[language][:id]
           end
 
-          status = nil
-          if is_proposed
-            status = proposed_versions[language][:status]
-          elsif is_rejected
-            status = rejected_versions[language][:status]
-          end
-
-          id = nil
-          if is_proposed
-            id = proposed_versions[language][:id]
-          elsif is_rejected
-            id = rejected_versions[language][:id]
-          end
-
           new_versions << {
               id: id,
               locale_code: language,
@@ -220,44 +206,6 @@ module Spaceship
               end_date: interval["value"]["priceTierEndDate"],
               grandfathered: interval["value"]["grandfathered"],
               country: interval["value"]["country"]
-<<<<<<< HEAD
-          }
-        end
-      end
-
-      def intro_offers=(value = [])
-        return [] unless raw_data["addOnType"] == Spaceship::Tunes::IAPType::RECURRING
-        new_intro_offers = []
-        value.each do |current_intro_offer|
-          new_intro_offers << {
-              "value" => {
-                  "country" => current_intro_offer[:country],
-                  "durationType" => current_intro_offer[:duration_type],
-                  "startDate" => current_intro_offer[:start_date],
-                  "endDate" => current_intro_offer[:end_date],
-                  "numOfPeriods" => current_intro_offer[:num_of_periods],
-                  "offerModeType" => current_intro_offer[:offer_mode_type],
-                  "tierStem" => current_intro_offer[:tier_stem]
-              }
-          }
-        end
-        @subscription_pricing.raw_data.set(['introOffers'], new_intro_offers)
-      end
-
-      def intro_offers
-        return [] unless raw_data["addOnType"] == Spaceship::Tunes::IAPType::RECURRING
-
-        @intro_offers ||= (@subscription_pricing.raw_data["introOffers"] || []).map do |intro_offer|
-          {
-              country: intro_offer["value"]["country"],
-              duration_type: intro_offer["value"]["durationType"],
-              start_date: intro_offer["value"]["startDate"],
-              end_date: intro_offer["value"]["endDate"],
-              num_of_periods: intro_offer["value"]["numOfPeriods"],
-              offer_mode_type: intro_offer["value"]["offerModeType"],
-              tier_stem: intro_offer["value"]["tierStem"]
-=======
->>>>>>> Fix rubocop and tests
           }
         end
       end
