@@ -191,6 +191,7 @@ module Spaceship
       end
 
       # beta_testers - [{email: "", firstName: "", lastName: ""}]
+      # BSP comment: DO NOT USE THIS, IT'S BROKEN
       def post_bulk_beta_tester_assignments(beta_group_id: nil, beta_testers: nil)
         beta_testers || []
 
@@ -229,6 +230,20 @@ module Spaceship
         }
 
         delete("betaTesters/#{beta_tester_id}/relationships/apps", nil, body)
+      end
+
+      # BSP method, completes the beta tester management functionality
+      def add_beta_tester_to_beta_groups(beta_tester_id: nil, beta_group_ids: [])
+        body = {
+            data: beta_group_ids.map do |id|
+              {
+                  type: "betaGroups",
+                  id: id
+              }
+            end
+        }
+
+        Client.instance.post("betaTesters/#{beta_tester_id}/relationships/betaGroups", body)
       end
 
       def delete_beta_tester_from_beta_groups(beta_tester_id: nil, beta_group_ids: [])
