@@ -47,6 +47,11 @@ module Spaceship
         return Spaceship::ConnectAPI.delete_beta_tester_from_apps(beta_tester_id: id, app_ids: app_ids)
       end
 
+      def add_to_beta_groups(beta_groups: nil)
+        beta_group_ids = beta_groups.map(&:id)
+        return Spaceship::ConnectAPI.add_beta_tester_to_beta_groups(beta_tester_id: id, beta_group_ids: beta_group_ids)
+      end
+
       def delete_from_beta_groups(beta_groups: nil)
         beta_group_ids = beta_groups.map(&:id)
         return Spaceship::ConnectAPI.delete_beta_tester_from_beta_groups(beta_tester_id: id, beta_group_ids: beta_group_ids)
