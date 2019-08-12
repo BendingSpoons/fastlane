@@ -105,6 +105,7 @@ module Spaceship
         Client.instance.post("betaAppReviewSubmissions", body)
       end
 
+      # BSP note: this does NOT work at the moment, as the public ConnectAPI doesn't support this feature
       def delete_beta_app_review_submission(beta_app_review_submission_id: nil)
         params = Client.instance.build_params(filter: nil, includes: nil, limit: nil, sort: nil, cursor: nil)
         Client.instance.delete("betaAppReviewSubmissions/#{beta_app_review_submission_id}", params)
@@ -181,6 +182,19 @@ module Spaceship
         Client.instance.post("builds/#{build_id}/relationships/betaGroups", body)
       end
 
+      def delete_beta_groups_to_build(build_id: nil, beta_group_ids: [])
+        body = {
+            data: beta_group_ids.map do |id|
+              {
+                  type: "betaGroups",
+                  id: id
+              }
+            end
+        }
+
+        Client.instance.delete("builds/#{build_id}/relationships/betaGroups", {}, body)
+      end
+
       def create_beta_group(app_id: nil, group_name: nil, public_link_enabled: false, public_link_limit: 10_000, public_link_limit_enabled: false)
         body = {
           data: {
@@ -202,6 +216,23 @@ module Spaceship
           }
         }
         Client.instance.post("betaGroups", body)
+      end
+
+      def update_beta_group(beta_group_id, public_link_enabled: nil, public_link_limit_enabled: nil, public_link_limit: nil)
+        attributes = {}
+        attributes[:publicLinkEnabled] = public_link_enabled unless public_link_enabled.nil?
+        attributes[:publicLinkLimit] = public_link_limit unless public_link_limit.nil?
+        attributes[:publicLinkLimitEnabled] = public_link_limit_enabled unless public_link_limit_enabled.nil?
+
+        body = {
+            data: {
+                attributes: attributes,
+                id: beta_group_id,
+                type: "betaGroups"
+            }
+        }
+
+        Client.instance.patch("betaGroups/#{beta_group_id}", body)
       end
 
       #
