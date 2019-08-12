@@ -304,6 +304,10 @@ module Spaceship
         return resps.flat_map(&:to_models)
       end
 
+      #
+      # Beta Groups
+      #
+
       def get_beta_groups(filter: {}, includes: nil, limit: nil, sort: nil)
         filter ||= {}
         filter[:app] = id
@@ -321,6 +325,16 @@ module Spaceship
           public_link_limit_enabled: public_link_limit_enabled
         ).all_pages
         return resps.flat_map(&:to_models).first
+      end
+
+      def add_beta_group(name, public_link_enabled: false, public_link_limit: nil, public_link_limit_enabled: false)
+        resps = Spaceship::ConnectAPI.add_beta_group(id, name, public_link_enabled: public_link_enabled, public_link_limit: public_link_limit, public_link_limit_enabled: public_link_limit_enabled)
+        Spaceship::ConnectAPI::Models.parse(resps.body)
+      end
+
+      def update_beta_group(beta_group, public_link_enabled: nil, public_link_limit: nil, public_link_limit_enabled: nil)
+        resps = Spaceship::ConnectAPI.update_beta_group(beta_group.id, public_link_enabled: public_link_enabled, public_link_limit: public_link_limit, public_link_limit_enabled: public_link_limit_enabled)
+        Spaceship::ConnectAPI::Models.parse(resps.body)
       end
 
       #
