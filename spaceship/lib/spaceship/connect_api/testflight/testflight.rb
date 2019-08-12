@@ -168,6 +168,32 @@ module Spaceship
         Client.instance.get("betaGroups", params)
       end
 
+      def add_beta_group(app_id, name, public_link_enabled: false, public_link_limit: nil, public_link_limit_enabled: false)
+        attributes = {
+            name: name,
+            publicLinkEnabled: public_link_enabled,
+            publicLinkLimitEnabled: public_link_limit_enabled
+        }
+        attributes[:publicLinkLimit] = public_link_limit if public_link_limit
+
+        body = {
+            data: {
+                attributes: attributes,
+                type: "betaGroups",
+                relationships: {
+                    app: {
+                        data: {
+                            type: "apps",
+                            id: app_id
+                        }
+                    }
+                }
+            }
+        }
+
+        Client.instance.post("betaGroups", body)
+      end
+
       def add_beta_groups_to_build(build_id: nil, beta_group_ids: [])
         body = {
           data: beta_group_ids.map do |id|
