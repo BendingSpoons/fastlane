@@ -139,6 +139,10 @@ module Spaceship
       def post_beta_app_review_submission
         return Spaceship::ConnectAPI.post_beta_app_review_submissions(build_id: id)
       end
+
+      def get_beta_app_review_submissions
+        return Spaceship::ConnectAPI.get_beta_app_review_submissions(filter: { build: id})
+      end
     end
   end
 end
