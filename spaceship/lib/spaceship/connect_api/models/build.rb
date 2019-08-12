@@ -111,10 +111,14 @@ module Spaceship
       # API
       #
 
-      def self.all(client: nil, app_id: nil, version: nil, build_number: nil, platform: nil, processing_states: "PROCESSING,FAILED,INVALID,VALID", includes: ESSENTIAL_INCLUDES, sort: "-uploadedDate", limit: 30)
+   def self.all(client: nil, app_id: nil, version: nil, build_number: nil, platform: nil, processing_states: "PROCESSING,FAILED,INVALID,VALID", active_only: nil, build_metrics: false, includes: ESSENTIAL_INCLUDES, sort: "-uploadedDate", limit: 30)
         client ||= Spaceship::ConnectAPI
-        resps = client.get_builds(
-          filter: { app: app_id, "preReleaseVersion.version" => version, version: build_number, processingState: processing_states },
+        filter = { app: app_id, "preReleaseVersion.version" => version, version: build_number, processingState: processing_states }
+        filter[:expired] = false if active_only
+        get_builds = client.method(build_metrics ? :get_builds_private : :get_builds)
+        includes = "#{includes},betaBuildMetrics" if build_metrics
+        resps = get_builds.call(
+          filter: filter,
           includes: includes,
           sort: sort,
           limit: limit
@@ -149,6 +153,13 @@ module Spaceship
         return client.add_beta_groups_to_build(build_id: id, beta_group_ids: beta_group_ids)
       end
 
+      def delete_beta_groups(client: nil, beta_groups: nil)
+        client ||= Spaceship::ConnectAPI
+        beta_groups ||= []
+        beta_group_ids = beta_groups.map(&:id)
+        return client.delete_beta_groups_to_build(build_id: id, beta_group_ids: beta_group_ids)
+      end
+
       def get_beta_build_localizations(client: nil, filter: {}, includes: nil, limit: nil, sort: nil)
         client ||= Spaceship::ConnectAPI
         resps = client.get_beta_build_localizations(
@@ -179,6 +190,11 @@ module Spaceship
       def expire!(client: nil)
         client ||= Spaceship::ConnectAPI
         return client.patch_builds(build_id: id, attributes: { expired: true })
+      end
+
+      def beta_app_review_submissions(client: nil)
+        client ||= Spaceship::ConnectAPI
+        return client.get_beta_app_review_submissions(filter: { build: id })
       end
     end
   end
