@@ -105,6 +105,7 @@ module Spaceship
         Client.instance.post("betaAppReviewSubmissions", body)
       end
 
+      # BSP note: this does NOT work at the moment, as the public ConnectAPI doesn't support this feature
       def delete_beta_app_review_submission(beta_app_review_submission_id: nil)
         params = Client.instance.build_params(filter: nil, includes: nil, limit: nil, sort: nil, cursor: nil)
         Client.instance.delete("betaAppReviewSubmissions/#{beta_app_review_submission_id}", params)
@@ -168,6 +169,49 @@ module Spaceship
         Client.instance.get("betaGroups", params)
       end
 
+      def add_beta_group(app_id, name, public_link_enabled: false, public_link_limit: nil, public_link_limit_enabled: false)
+        attributes = {
+            name: name,
+            publicLinkEnabled: public_link_enabled,
+            publicLinkLimitEnabled: public_link_limit_enabled
+        }
+        attributes[:publicLinkLimit] = public_link_limit if public_link_limit
+
+        body = {
+            data: {
+                attributes: attributes,
+                type: "betaGroups",
+                relationships: {
+                    app: {
+                        data: {
+                            type: "apps",
+                            id: app_id
+                        }
+                    }
+                }
+            }
+        }
+
+        Client.instance.post("betaGroups", body)
+      end
+
+      def update_beta_group(beta_group_id, public_link_enabled: nil, public_link_limit_enabled: nil, public_link_limit: nil)
+        attributes = {}
+        attributes[:publicLinkEnabled] = public_link_enabled unless public_link_enabled.nil?
+        attributes[:publicLinkLimit] = public_link_limit unless public_link_limit.nil?
+        attributes[:publicLinkLimitEnabled] = public_link_limit_enabled unless public_link_limit_enabled.nil?
+
+        body = {
+            data: {
+                attributes: attributes,
+                id: beta_group_id,
+                type: "betaGroups"
+            }
+        }
+
+        Client.instance.patch("betaGroups/#{beta_group_id}", body)
+      end
+
       def add_beta_groups_to_build(build_id: nil, beta_group_ids: [])
         body = {
           data: beta_group_ids.map do |id|
@@ -179,6 +223,19 @@ module Spaceship
         }
 
         Client.instance.post("builds/#{build_id}/relationships/betaGroups", body)
+      end
+
+      def delete_beta_groups_to_build(build_id: nil, beta_group_ids: [])
+        body = {
+            data: beta_group_ids.map do |id|
+              {
+                  type: "betaGroups",
+                  id: id
+              }
+            end
+        }
+
+        Client.instance.delete("builds/#{build_id}/relationships/betaGroups", {}, body)
       end
 
       #
