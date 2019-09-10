@@ -101,6 +101,11 @@ module Spaceship
         resps = Spaceship::ConnectAPI.add_beta_group(id, name, public_link_enabled: public_link_enabled, public_link_limit: public_link_limit, public_link_limit_enabled: public_link_limit_enabled)
         Spaceship::ConnectAPI::Models.parse(resps.body)
       end
+
+      def update_beta_group(beta_group, public_link_enabled: nil, public_link_limit: nil, public_link_limit_enabled: nil)
+        resps = Spaceship::ConnectAPI.update_beta_group(beta_group.id, public_link_enabled: public_link_enabled, public_link_limit: public_link_limit, public_link_limit_enabled: public_link_limit_enabled)
+        Spaceship::ConnectAPI::Models.parse(resps.body)
+      end
     end
   end
 end

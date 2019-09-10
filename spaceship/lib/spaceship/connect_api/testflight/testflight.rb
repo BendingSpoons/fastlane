@@ -194,6 +194,23 @@ module Spaceship
         Client.instance.post("betaGroups", body)
       end
 
+      def update_beta_group(beta_group_id, public_link_enabled: nil, public_link_limit_enabled: nil, public_link_limit: nil)
+        attributes = {}
+        attributes[:publicLinkEnabled] = public_link_enabled unless public_link_enabled.nil?
+        attributes[:publicLinkLimit] = public_link_limit unless public_link_limit.nil?
+        attributes[:publicLinkLimitEnabled] = public_link_limit_enabled unless public_link_limit_enabled.nil?
+
+        body = {
+            data: {
+                attributes: attributes,
+                id: beta_group_id,
+                type: "betaGroups"
+            }
+        }
+
+        Client.instance.patch("betaGroups/#{beta_group_id}", body)
+      end
+
       def add_beta_groups_to_build(build_id: nil, beta_group_ids: [])
         body = {
           data: beta_group_ids.map do |id|
