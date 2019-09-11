@@ -99,7 +99,7 @@ module Spaceship
       def self.all(app_id: nil, version: nil, build_number: nil, active_only: nil, processed_only: nil, includes: ESSENTIAL_INCLUDES, sort: "-uploadedDate", limit: 30)
         filter = { app: app_id, "preReleaseVersion.version" => version, version: build_number }
         filter[:expired] = false if active_only
-        filter[:processing_state] = ProcessingState.VALID if processed_only
+        filter[:processingState] = ProcessingState::VALID if processed_only
         resps = Spaceship::ConnectAPI.get_builds(
           filter: filter,
           includes: includes,
