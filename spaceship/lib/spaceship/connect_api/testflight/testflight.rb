@@ -224,6 +224,19 @@ module Spaceship
         Client.instance.post("builds/#{build_id}/relationships/betaGroups", body)
       end
 
+      def delete_beta_groups_to_build(build_id: nil, beta_group_ids: [])
+        body = {
+            data: beta_group_ids.map do |id|
+              {
+                  type: "betaGroups",
+                  id: id
+              }
+            end
+        }
+
+        Client.instance.delete("builds/#{build_id}/relationships/betaGroups", {}, body)
+      end
+
       #
       # betaTesters
       #

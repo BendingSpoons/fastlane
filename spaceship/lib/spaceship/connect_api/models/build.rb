@@ -119,6 +119,12 @@ module Spaceship
         return Spaceship::ConnectAPI.add_beta_groups_to_build(build_id: id, beta_group_ids: beta_group_ids)
       end
 
+      def delete_beta_groups(beta_groups: nil)
+        beta_groups ||= []
+        beta_group_ids = beta_groups.map(&:id)
+        return Spaceship::ConnectAPI.delete_beta_groups_to_build(build_id: id, beta_group_ids: beta_group_ids)
+      end
+
       def get_beta_build_localizations(filter: {}, includes: nil, limit: nil, sort: nil)
         resps = Spaceship::ConnectAPI.get_beta_build_localizations(
           filter: { build: id },
