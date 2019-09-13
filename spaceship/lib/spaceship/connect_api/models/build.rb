@@ -125,6 +125,10 @@ module Spaceship
         return Spaceship::ConnectAPI.delete_beta_groups_to_build(build_id: id, beta_group_ids: beta_group_ids)
       end
 
+      def expire
+        return Spaceship::ConnectAPI.patch_builds(build_id: id, attributes: { expired: true })
+      end
+
       def get_beta_build_localizations(filter: {}, includes: nil, limit: nil, sort: nil)
         resps = Spaceship::ConnectAPI.get_beta_build_localizations(
           filter: { build: id },
