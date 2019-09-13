@@ -43,6 +43,10 @@ module Spaceship
 
       attr_accessor :available_primary_locale_codes
 
+      attr_accessor :license
+
+      attr_accessor :eula
+
       attr_mapping(
         'localizedMetadata.value' => :languages,
         'primaryCategory.value' => :primary_category,
@@ -52,7 +56,9 @@ module Spaceship
         'secondaryFirstSubCategory.value' => :secondary_first_sub_category,
         'secondarySecondSubCategory.value' => :secondary_second_sub_category,
         'primaryLocaleCode.value' => :primary_locale_code,
-        'availablePrimaryLocaleCodes' => :available_primary_locale_codes
+        'availablePrimaryLocaleCodes' => :available_primary_locale_codes,
+        "license" => :license,
+        "license.EULAText" => :eula
       )
 
       class << self
@@ -91,6 +97,10 @@ module Spaceship
 
       # Custom Setters
       #
+      def eula=(value)
+        self.license['EULAText'] = value
+      end
+
       def primary_category=(value)
         value = prefix_apps(value)
         value = prefix_mzgenre(value)
