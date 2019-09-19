@@ -105,6 +105,7 @@ module Spaceship
         Client.instance.post("betaAppReviewSubmissions", body)
       end
 
+      # BSP note: this does NOT work at the moment, as the public ConnectAPI doesn't support this feature
       def delete_beta_app_review_submission(beta_app_review_submission_id: nil)
         params = Client.instance.build_params(filter: nil, includes: nil, limit: nil, sort: nil, cursor: nil)
         Client.instance.delete("betaAppReviewSubmissions/#{beta_app_review_submission_id}", params)

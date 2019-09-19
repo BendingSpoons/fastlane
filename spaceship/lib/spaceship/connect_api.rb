@@ -2,6 +2,7 @@ require 'spaceship/connect_api/model'
 require 'spaceship/connect_api/response'
 require 'spaceship/connect_api/token'
 
+require 'spaceship/connect_api/private/testflight/testflight'
 require 'spaceship/connect_api/provisioning/provisioning'
 require 'spaceship/connect_api/testflight/testflight'
 require 'spaceship/connect_api/users/users'
@@ -32,6 +33,7 @@ module Spaceship
   class ConnectAPI
     extend Spaceship::ConnectAPI::Provisioning
     extend Spaceship::ConnectAPI::TestFlight
+    extend Spaceship::ConnectAPI::TestFlightPrivate
     extend Spaceship::ConnectAPI::Users
 
     @token = nil
