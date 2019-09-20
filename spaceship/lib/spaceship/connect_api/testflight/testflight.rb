@@ -329,7 +329,7 @@ module Spaceship
       # builds
       #
 
-      def get_builds(filter: {}, includes: "buildBetaDetail", limit: 10, sort: "uploadedDate", cursor: nil)
+      def get_builds(filter: {}, includes: "buildBetaDetail,betaBuildMetrics", limit: 10, sort: "uploadedDate", cursor: nil)
         params = Client.instance.build_params(filter: filter, includes: includes, limit: limit, sort: sort, cursor: cursor)
         Client.instance.get("builds", params)
       end
