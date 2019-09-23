@@ -191,6 +191,84 @@ module Spaceship
           provisioning_request_client.delete("profiles/#{profile_id}")
         end
       end
+
+      #
+      # capabilities
+      #
+
+      def disable_bundle_id_capability(bundle_id_capability: nil)
+        # Safety check: you can't disable a capability that is already disable (Apple doesn't know idempotency)
+        Client.instance.delete("bundleIdCapabilities/#{bundle_id_capability}")
+      rescue Spaceship::UnexpectedResponse
+        return
+      end
+
+      def enable_bundle_id_capability(bundle_id_id: nil, attributes: {}, relationships: {})
+        body = {
+            data: {
+                type: "bundleIdCapabilities",
+                attributes: attributes,
+                relationships: relationships
+            }
+        }
+
+        Client.instance.post("bundleIdCapabilities", body)
+      end
+
+      def enable_sign_in_with_apple_primary(bundle_id_id: nil)
+        enable_sign_in_with_apple(bundle_id_id: bundle_id_id, consent_type: "PRIMARY_APP_CONSENT")
+      end
+
+      def enable_sign_in_with_apple_related(bundle_id_id: nil, related_bundle_id_id: nil)
+        association = {
+            key: "TIBURON_PRIMARY_BUNDLEID",
+            allowedInstances: "MULTIPLE",
+            relationshipName: "appConsentBundleId",
+            relationshipType: "bundleIds"
+        }
+        relationships = {
+            appConsentBundleId: {
+                data: {
+                    type: "bundleIds",
+                    id: related_bundle_id_id
+                }
+            }
+        }
+        enable_sign_in_with_apple(bundle_id_id: bundle_id_id, consent_type: "RELATED_APP_CONSENT", associations: [association], extra_relationships: relationships)
+      end
+
+      def disable_sign_in_with_apple(bundle_id_id: nil)
+        disable_bundle_id_capability(bundle_id_capability: "#{bundle_id_id}_APPLE_ID_AUTH")
+      end
+
+      # @private
+
+      def enable_sign_in_with_apple(bundle_id_id: nil, consent_type: nil, associations: nil, extra_relationships: {})
+        consent_options = {}
+        consent_options[:key] = consent_type
+        consent_options[:associations] = associations if associations
+
+        consent = {
+            key: "TIBURON_APP_CONSENT",
+            options: [consent_options]
+        }
+        settings = [consent]
+
+        attributes = {
+            capabilityType: "APPLE_ID_AUTH",
+            settings: settings
+        }
+        relationships = {
+            bundleId: {
+                data: {
+                    type: "bundleIds",
+                    id: bundle_id_id
+                }
+            }
+        }
+        relationships.update(extra_relationships) if extra_relationships
+        enable_bundle_id_capability(bundle_id_id: bundle_id_id, attributes: attributes, relationships: relationships)
+      end
     end
   end
 end
