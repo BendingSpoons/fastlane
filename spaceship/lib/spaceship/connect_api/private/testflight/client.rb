@@ -8,10 +8,8 @@ module Spaceship
         def self.instance
           # Verify there is a token or a client that can be used
           if Spaceship::Tunes.client
-            # Initialize new client if new or if team changed
-            if @client.nil? || @client.team_id != Spaceship::Tunes.client.team_id
-              @client = Client.client_with_authorization_from(Spaceship::Tunes.client)
-            end
+            # Avoid re-using the same client twice in an effort to prevent silent session expiration
+            @client = Client.client_with_authorization_from(Spaceship::Tunes.client)
           end
 
           # Need to handle not having a client but this shouldn't ever happen
