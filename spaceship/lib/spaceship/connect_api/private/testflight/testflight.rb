@@ -1,4 +1,4 @@
-require 'spaceship/connect_api/private/testflight/client'
+require_relative 'client'
 
 module Spaceship
   class ConnectAPI
