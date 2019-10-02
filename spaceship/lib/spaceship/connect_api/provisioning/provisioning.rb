@@ -55,7 +55,17 @@ module Spaceship
         return
       end
 
-      def enable_bundle_id_capability(bundle_id_id: nil, attributes: {}, relationships: {})
+      def enable_bundle_id_capability(bundle_id_id: nil, attributes: {}, extra_relationships: nil)
+        relationships = {
+            bundleId: {
+                data: {
+                    type: "bundleIds",
+                    id: bundle_id_id
+                }
+            }
+        }
+        relationships.update(extra_relationships) if extra_relationships
+
         body = {
             data: {
                 type: "bundleIdCapabilities",
@@ -110,16 +120,8 @@ module Spaceship
             capabilityType: "APPLE_ID_AUTH",
             settings: settings
         }
-        relationships = {
-            bundleId: {
-                data: {
-                    type: "bundleIds",
-                    id: bundle_id_id
-                }
-            }
-        }
-        relationships.update(extra_relationships) if extra_relationships
-        enable_bundle_id_capability(bundle_id_id: bundle_id_id, attributes: attributes, relationships: relationships)
+
+        enable_bundle_id_capability(bundle_id_id: bundle_id_id, attributes: attributes, extra_relationships: extra_relationships)
       end
     end
   end
