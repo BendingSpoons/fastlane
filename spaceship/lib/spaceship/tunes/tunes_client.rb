@@ -796,6 +796,14 @@ module Spaceship
       parse_response(r, 'data')['detailLocales']
     end
 
+    def available_storefronts
+      r = request(:get, "ra/apps/storePreview/regionCountryLanguage")
+      response = parse_response(r, 'data')
+      response.flat_map { |region| region["storeFronts"] }
+              .flat_map { |storefront| storefront["storeFront"] }
+              .uniq
+    end
+
     #####################################################
     # @!group App Icons
     #####################################################
