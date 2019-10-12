@@ -94,7 +94,9 @@ module Spaceship
 
       def update_eula!(eula)
         license['EULAText'] = eula
+        license['countries'] = client.available_storefronts
         raw_data['license']['EULAText'] = eula
+        raw_data['license']['countries'] = client.available_storefronts
         self.save!
       end
 
