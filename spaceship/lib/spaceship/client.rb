@@ -243,6 +243,7 @@ module Spaceship
           @logger = Logger.new(path)
         end
 
+        @logger.level = Logger::WARN
         @logger.formatter = proc do |severity, datetime, progname, msg|
           severity = format('%-5.5s', severity)
           "#{severity} [#{datetime.strftime('%H:%M:%S')}]: #{msg}\n"
