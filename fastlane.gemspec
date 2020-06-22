@@ -44,7 +44,7 @@ Gem::Specification.new do |spec|
   spec.homepage      = "https://fastlane.tools"
   spec.license       = "MIT"
   spec.metadata      = {
-    "docs_url" => "https://docs.fastlane.tools"
+      "docs_url" => "https://docs.fastlane.tools"
   }
 
   spec.required_ruby_version = '>= 2.4'
@@ -95,7 +95,6 @@ Gem::Specification.new do |spec|
   # If you upgrade this gem, make sure to upgrade the users of it as well.
   spec.add_dependency('google-api-client', '>= 0.37.0', '< 0.39.0') # Google API Client to access Play Publishing API
   spec.add_dependency('google-cloud-storage', '>= 1.15.0', '< 2.0.0') # Access Google Cloud Storage for match
-  spec.add_dependency('signet', '< 0.12.0')
 
   spec.add_dependency('emoji_regex', '>= 0.1', '< 4.0') # Used to scan for Emoji in the changelog
 
