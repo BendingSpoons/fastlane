@@ -161,7 +161,11 @@ module Deliver
       UI.deprecated('Deliver::AppScreenshot#is_valid? is deprecated in favor of Deliver::AppScreenshotValidator')
       return false unless ["png", "PNG", "jpg", "JPG", "jpeg", "JPEG"].include?(self.path.split(".").last)
 
-      return self.screen_size == self.class.calculate_screen_size(self.path)
+      estimated_screen_size = self.class.calculate_screen_size(self.path)
+
+      return self.screen_size == estimated_screen_size ||
+             self.screen_size == ScreenSize::IOS_IPAD_PRO_12_9 && estimated_screen_size == ScreenSize::IOS_IPAD_PRO ||
+             self.screen_size == ScreenSize::IOS_IPAD_PRO && estimated_screen_size == ScreenSize::IOS_IPAD_PRO_12_9
     end
 
     def is_messages?
