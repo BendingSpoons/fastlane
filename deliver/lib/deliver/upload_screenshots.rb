@@ -6,6 +6,8 @@ require_relative 'module'
 require_relative 'loader'
 
 module Deliver
+  MAX_RETRIES = 10
+
   # upload screenshots to App Store Connect
   class UploadScreenshots
     def upload(options, screenshots)
@@ -43,30 +45,11 @@ module Deliver
           screenshot_sets.each do |screenshot_set|
             UI.message("Removing all previously uploaded screenshots for '#{localization.locale}' '#{screenshot_set.screenshot_display_type}'...")
             screenshot_set.app_screenshots.each do |screenshot|
-              UI.verbose("Deleting screenshot - #{localization.locale} #{screenshot_set.screenshot_display_type} #{screenshot.id}")
-              threads << Thread.new do
-                begin
-                  screenshot.delete!
-                  UI.verbose("Deleted screenshot - #{localization.locale} #{screenshot_set.screenshot_display_type} #{screenshot.id}")
-                rescue => error
-                  UI.verbose("Failed to delete screenshot - #{localization.locale} #{screenshot_set.screenshot_display_type} #{screenshot.id}")
-                  errors << error
-                end
+              retry_api_call do
+                UI.verbose("Deleting screenshot - #{localization.locale} #{screenshot_set.screenshot_display_type} #{screenshot.id}")
+                screenshot.delete!
               end
             end
-          end
-
-          sleep(1) # Feels bad but sleeping a bit to let the threads catchup
-
-          unless threads.empty?
-            Helper.show_loading_indicator("Waiting for screenshots to be deleted for '#{localization.locale}'... (might be slow)") unless FastlaneCore::Globals.verbose?
-            threads.each(&:join)
-            Helper.hide_loading_indicator unless FastlaneCore::Globals.verbose?
-          end
-
-          # Crash if any errors happen while deleting
-          unless errors.empty?
-            UI.crash!(errors.map(&:message).join("\n"))
           end
         end
       end
@@ -130,43 +113,45 @@ module Deliver
 
         UI.message("Uploading #{screenshots_for_language.length} screenshots for language #{language}")
         screenshots_for_language.each do |screenshot|
-          display_type = screenshot.device_type
-          set = app_screenshot_sets_map[display_type]
+          retry_api_call do
+            display_type = screenshot.device_type
+            set = app_screenshot_sets_map[display_type]
 
-          if display_type.nil?
-            UI.error("Error... Screenshot size #{screenshot.screen_size} not valid for App Store Connect")
-            next
-          end
+            if display_type.nil?
+              UI.error("Error... Screenshot size #{screenshot.screen_size} not valid for App Store Connect")
+              next
+            end
 
-          unless set
-            set = localization.create_app_screenshot_set(attributes: {
-              screenshotDisplayType: display_type
-            })
-            app_screenshot_sets_map[display_type] = set
+            unless set
+              set = localization.create_app_screenshot_set(attributes: {
+                  screenshotDisplayType: display_type
+              })
+              app_screenshot_sets_map[display_type] = set
 
-            indized[localization.locale][set.screenshot_display_type] = {
-              count: 0,
-              checksums: []
-            }
-          end
+              indized[localization.locale][set.screenshot_display_type] = {
+                count: 0,
+                checksums: []
+              }
+            end
 
-          index = indized[localization.locale][set.screenshot_display_type][:count]
+            index = indized[localization.locale][set.screenshot_display_type]
 
-          if index >= 10
-            UI.error("Too many screenshots found for device '#{screenshot.device_type}' in '#{screenshot.language}', skipping this one (#{screenshot.path})")
-            next
-          end
+            if index >= 10
+              UI.error("Too many screenshots found for device '#{screenshot.formatted_name}' in '#{screenshot.language}', skipping this one (#{screenshot.path})")
+              next
+            end
 
-          bytes = File.binread(screenshot.path)
-          checksum = Digest::MD5.hexdigest(bytes)
-          duplicate = indized[localization.locale][set.screenshot_display_type][:checksums].include?(checksum)
+            bytes = File.binread(screenshot.path)
+            checksum = Digest::MD5.hexdigest(bytes)
+            duplicate = indized[localization.locale][set.screenshot_display_type][:checksums].include?(checksum)
 
-          if duplicate
-            UI.message("Previous uploaded. Skipping '#{screenshot.path}'...")
-          else
-            indized[localization.locale][set.screenshot_display_type][:count] += 1
-            UI.message("Uploading '#{screenshot.path}'...")
-            set.upload_screenshot(path: screenshot.path)
+            if duplicate
+              UI.message("Previous uploaded. Skipping '#{screenshot.path}'...")
+            else
+              indized[localization.locale][set.screenshot_display_type][:count] += 1
+              UI.message("Uploading '#{screenshot.path}'...")
+              set.upload_screenshot(path: screenshot.path)
+            end
           end
         end
       end
@@ -239,6 +224,33 @@ module Deliver
       end
 
       return screenshots
+    end
+
+    def retry_api_call
+      success = false
+      try_number = 0
+
+      until success
+        begin
+          yield
+          success = true
+        rescue Spaceship::InternalServerError, Faraday::ConnectionFailed => e
+          # BSP: We're not quite sure of what's causing the 500/504 errors, possibly a server issue. To avoid the
+          # complete failure of the upload, we retry and hope for the best
+          UI.error("Error while interacting with App Store Connect API, making a new attempt. Error: #{e.message}. Counter: #{try_number}")
+          try_number += 1
+
+          raise Spaceship::TunesClient::ITunesConnectPotentialServerError.new, "Giving up!" if try_number > MAX_RETRIES
+        rescue Spaceship::UnexpectedResponse => e
+          # If we get this error, it means the previous deletion operation completed successfully and must not be
+          # attempted again. We never get this on a failed creation.
+          if e.message =~ /The specified resource does not exist/
+            success = true
+          else
+            raise e
+          end
+        end
+      end
     end
 
     # helper method so Spaceship::Tunes.client.available_languages is easier to test
