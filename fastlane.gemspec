@@ -104,6 +104,9 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency('aws-sdk-s3', '~> 1.0') # Used for S3 storage in fastlane match
 
+  # Bending Spoons dependencies
+  spec.add_dependency('parallel', '~> 1.19.2') # Speed up operations with processes/threads
+
   # Development only
   spec.add_development_dependency('rake')
   spec.add_development_dependency('rspec', '~> 3.10')
