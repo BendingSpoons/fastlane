@@ -1,3 +1,4 @@
+require_relative 'deliver/utils'
 require_relative 'deliver/loader'
 require_relative 'deliver/options'
 require_relative 'deliver/commands_generator'
