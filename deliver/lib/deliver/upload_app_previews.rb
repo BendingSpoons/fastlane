@@ -5,14 +5,12 @@ require 'digest/md5'
 require_relative 'app_preview'
 require_relative 'module'
 require_relative 'loader'
+require_relative 'utils'
 
 module Deliver
-  MAX_N_THREADS = 16
-  MAX_RETRIES = 10
-
   # upload app previews to App Store Connect
   class UploadAppPreviews
-    def upload(options, previews, max_n_threads = MAX_N_THREADS)
+    def upload(options, previews, max_n_threads = 16)
       return if options[:skip_app_previews]
       return if options[:edit_live]
 
@@ -42,11 +40,10 @@ module Deliver
           previews_sets = localization.get_app_preview_sets
 
           # Multi threading delete on single localization
-
           previews_sets.each do |preview_set|
             UI.message("Removing all previously uploaded app previews for '#{localization.locale}' '#{preview_set.preview_type}'...")
             preview_set.app_previews.each do |preview|
-              retry_api_call do
+              Deliver.retry_api_call do
                 UI.verbose("Deleting app preview - #{localization.locale} #{preview_set.preview_type} #{preview.id}")
                 preview.delete!
               end
@@ -115,7 +112,7 @@ module Deliver
 
         UI.message("Uploading #{previews_for_language.length} app previews for language #{language}")
         previews_for_language.each do |preview|
-          retry_api_call do
+          Deliver.retry_api_call do
             display_type = preview.device_type
             set = app_preview_sets_map[display_type]
 
@@ -158,33 +155,6 @@ module Deliver
         end
       end
       UI.success("Successfully uploaded app previews to App Store Connect")
-    end
-
-    def retry_api_call
-      success = false
-      try_number = 0
-
-      until success
-        begin
-          yield
-          success = true
-        rescue Spaceship::InternalServerError, Faraday::ConnectionFailed => e
-          # BSP: We're not quite sure of what's causing the 500/504 errors, possibly a server issue. To avoid the
-          # complete failure of the upload, we retry and hope for the best
-          UI.error("Error while interacting with App Store Connect API, making a new attempt. Error: #{e.message}. Counter: #{try_number}")
-          try_number += 1
-
-          raise Spaceship::TunesClient::ITunesConnectPotentialServerError.new, "Giving up!" if try_number > MAX_RETRIES
-        rescue Spaceship::UnexpectedResponse => e
-          # If we get this error, it means the previous deletion operation completed successfully and must not be
-          # attempted again. We never get this on a failed creation.
-          if e.message =~ /The specified resource does not exist/
-            success = true
-          else
-            raise e
-          end
-        end
-      end
     end
 
     # helper method so Spaceship::Tunes.client.available_languages is easier to test
