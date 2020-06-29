@@ -5,14 +5,12 @@ require 'digest/md5'
 require_relative 'app_screenshot'
 require_relative 'module'
 require_relative 'loader'
+require_relative 'utils'
 
 module Deliver
-  MAX_SCREENSHOT_THREADS = 16
-  MAX_SCREENSHOT_RETRIES = 10
-
   # upload screenshots to App Store Connect
   class UploadScreenshots
-    def upload(options, screenshots, max_n_threads = MAX_SCREENSHOT_THREADS)
+    def upload(options, screenshots, max_n_threads = 16)
       return if options[:skip_screenshots]
       return if options[:edit_live]
 
@@ -42,11 +40,10 @@ module Deliver
           screenshot_sets = localization.get_app_screenshot_sets
 
           # Multi threading delete on single localization
-
           screenshot_sets.each do |screenshot_set|
             UI.message("Removing all previously uploaded screenshots for '#{localization.locale}' '#{screenshot_set.screenshot_display_type}'...")
             screenshot_set.app_screenshots.each do |screenshot|
-              retry_api_call do
+              Deliver.retry_api_call do
                 UI.verbose("Deleting screenshot - #{localization.locale} #{screenshot_set.screenshot_display_type} #{screenshot.id}")
                 screenshot.delete!
               end
@@ -115,7 +112,7 @@ module Deliver
 
         UI.message("Uploading #{screenshots_for_language.length} screenshots for language #{language}")
         screenshots_for_language.each do |screenshot|
-          retry_api_call do
+          Deliver.retry_api_call do
             display_type = screenshot.device_type
             set = app_screenshot_sets_map[display_type]
 
@@ -226,33 +223,6 @@ module Deliver
       end
 
       return screenshots
-    end
-
-    def retry_api_call
-      success = false
-      try_number = 0
-
-      until success
-        begin
-          yield
-          success = true
-        rescue Spaceship::InternalServerError, Faraday::ConnectionFailed => e
-          # BSP: We're not quite sure of what's causing the 500/504 errors, possibly a server issue. To avoid the
-          # complete failure of the upload, we retry and hope for the best
-          UI.error("Error while interacting with App Store Connect API, making a new attempt. Error: #{e.message}. Counter: #{try_number}")
-          try_number += 1
-
-          raise Spaceship::TunesClient::ITunesConnectPotentialServerError.new, "Giving up!" if try_number > MAX_SCREENSHOT_RETRIES
-        rescue Spaceship::UnexpectedResponse => e
-          # If we get this error, it means the previous deletion operation completed successfully and must not be
-          # attempted again. We never get this on a failed creation.
-          if e.message =~ /The specified resource does not exist/
-            success = true
-          else
-            raise e
-          end
-        end
-      end
     end
 
     # helper method so Spaceship::Tunes.client.available_languages is easier to test
