@@ -42,8 +42,6 @@ module Deliver
           screenshot_sets = localization.get_app_screenshot_sets
 
           # Multi threading delete on single localization
-          threads = []
-          errors = []
 
           screenshot_sets.each do |screenshot_set|
             UI.message("Removing all previously uploaded screenshots for '#{localization.locale}' '#{screenshot_set.screenshot_display_type}'...")
