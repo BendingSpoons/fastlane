@@ -1,3 +1,4 @@
+require 'parallel'
 require 'spaceship/tunes/tunes'
 require 'digest/md5'
 
@@ -6,11 +7,12 @@ require_relative 'module'
 require_relative 'loader'
 
 module Deliver
+  MAX_N_THREADS = 16
   MAX_RETRIES = 10
 
   # upload screenshots to App Store Connect
   class UploadScreenshots
-    def upload(options, screenshots)
+    def upload(options, screenshots, max_n_threads = MAX_N_THREADS)
       return if options[:skip_screenshots]
       return if options[:edit_live]
 
@@ -59,7 +61,8 @@ module Deliver
       tries -= 1
 
       # Get localizations on version
-      localizations.each do |localization|
+      n_threads = [max_n_threads, localizations.length].min
+      Parallel.each(localizations, in_threads: n_threads) do |localization|
         # Only delete screenshots if trying to upload
         next unless screenshots_per_language.keys.include?(localization.locale)
 
@@ -67,28 +70,16 @@ module Deliver
         screenshot_sets = localization.get_app_screenshot_sets
 
         # Multi threading delete on single localization
-        threads = []
-
         screenshot_sets.each do |screenshot_set|
           UI.message("Removing all previously uploaded screenshots for '#{localization.locale}' '#{screenshot_set.screenshot_display_type}'...")
           screenshot_set.app_screenshots.each do |screenshot|
             UI.verbose("Deleting screenshot - #{localization.locale} #{screenshot_set.screenshot_display_type} #{screenshot.id}")
-            threads << Thread.new do
-              retry_api_call do
-                screenshot.delete!
-                UI.verbose("Deleted screenshot - #{localization.locale} #{screenshot_set.screenshot_display_type} #{screenshot.id}")
-              end
+            retry_api_call do
+              screenshot.delete!
+              UI.verbose("Deleted screenshot - #{localization.locale} #{screenshot_set.screenshot_display_type} #{screenshot.id}")
             end
           end
         end
-
-        sleep(1) # Feels bad but sleeping a bit to let the threads catchup
-
-        next if threads.empty?
-
-        Helper.show_loading_indicator("Waiting for screenshots to be deleted for '#{localization.locale}'... (might be slow)") unless FastlaneCore::Globals.verbose?
-        threads.each(&:join)
-        Helper.hide_loading_indicator unless FastlaneCore::Globals.verbose?
       end
 
       # Verify all screenshots have been deleted
@@ -142,7 +133,8 @@ module Deliver
       # Upload screenshots
       indized = {} # per language and device type
 
-      screenshots_per_language.each do |language, screenshots_for_language|
+      n_threads = [max_n_threads, screenshots_per_language.length].min
+      Parallel.each(screenshots_per_language, in_threads: n_threads) do |language, screenshots_for_language|
         # Find localization to upload screenshots to
         localization = localizations.find do |l|
           l.locale == language
