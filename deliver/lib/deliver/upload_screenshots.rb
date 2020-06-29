@@ -7,12 +7,12 @@ require_relative 'module'
 require_relative 'loader'
 
 module Deliver
-  MAX_N_THREADS = 16
-  MAX_RETRIES = 10
+  MAX_SCREENSHOT_THREADS = 16
+  MAX_SCREENSHOT_RETRIES = 10
 
   # upload screenshots to App Store Connect
   class UploadScreenshots
-    def upload(options, screenshots, max_n_threads = MAX_N_THREADS)
+    def upload(options, screenshots, max_n_threads = MAX_SCREENSHOT_THREADS)
       return if options[:skip_screenshots]
       return if options[:edit_live]
 
@@ -76,10 +76,10 @@ module Deliver
         localizations = version.get_app_store_version_localizations
       end
 
-      upload_screenshots(screenshots_per_language, localizations, options)
+      upload_screenshots(screenshots_per_language, localizations, options, max_n_threads)
     end
 
-    def upload_screenshots(screenshots_per_language, localizations, options)
+    def upload_screenshots(screenshots_per_language, localizations, options, max_n_threads)
       # Check if should wait for processing
       # Default to waiting if submitting for review (since needed for submission)
       # Otherwise use enviroment variable
@@ -261,7 +261,7 @@ module Deliver
           UI.error("Error while interacting with App Store Connect API, making a new attempt. Error: #{e.message}. Counter: #{try_number}")
           try_number += 1
 
-          raise Spaceship::TunesClient::ITunesConnectPotentialServerError.new, "Giving up!" if try_number > MAX_RETRIES
+          raise Spaceship::TunesClient::ITunesConnectPotentialServerError.new, "Giving up!" if try_number > MAX_SCREENSHOT_RETRIES
         rescue Spaceship::UnexpectedResponse => e
           # If we get this error, it means the previous deletion operation completed successfully and must not be
           # attempted again. We never get this on a failed creation.
