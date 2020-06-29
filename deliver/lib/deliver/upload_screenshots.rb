@@ -1,3 +1,4 @@
+require 'parallel'
 require 'spaceship/tunes/tunes'
 require 'digest/md5'
 
@@ -6,11 +7,12 @@ require_relative 'module'
 require_relative 'loader'
 
 module Deliver
+  MAX_N_THREADS = 16
   MAX_RETRIES = 10
 
   # upload screenshots to App Store Connect
   class UploadScreenshots
-    def upload(options, screenshots)
+    def upload(options, screenshots, max_n_threads = MAX_N_THREADS)
       return if options[:skip_screenshots]
       return if options[:edit_live]
 
@@ -31,7 +33,8 @@ module Deliver
 
       if options[:overwrite_screenshots]
         # Get localizations on version
-        localizations.each do |localization|
+        n_threads = [max_n_threads, localizations.length].min
+        Parallel.each(localizations, in_threads: n_threads) do |localization|
           # Only delete screenshots if trying to upload
           next unless screenshots_per_language.keys.include?(localization.locale)
 
@@ -82,7 +85,8 @@ module Deliver
       # Upload screenshots
       indized = {} # per language and device type
 
-      screenshots_per_language.each do |language, screenshots_for_language|
+      n_threads = [max_n_threads, screenshots_per_language.length].min
+      Parallel.each(screenshots_per_language, in_threads: n_threads) do |language, screenshots_for_language|
         # Find localization to upload screenshots to
         localization = localizations.find do |l|
           l.locale == language
