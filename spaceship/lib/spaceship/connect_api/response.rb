@@ -54,7 +54,7 @@ module Spaceship
       end
 
       def to_models
-        return [] if body.nil?
+        return [] if body.nil? || body['data'].nil?
         model_or_models = Spaceship::ConnectAPI::Models.parse(body)
         return [model_or_models].flatten
       end
