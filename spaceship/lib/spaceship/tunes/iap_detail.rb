@@ -154,10 +154,10 @@ module Spaceship
               "value" => {
                   "name" => { "value" => current_version[:name] },
                   "description" => { "value" => current_version[:description] },
-                  "localeCode" => language.to_s,
+                  "localeCode" => current_version[:locale_code],
                   "publicationName" => nil,
-                  "status" => is_proposed ? proposed_versions[language][:status] : nil,
-                  "id" => is_proposed ? proposed_versions[language][:id] : nil
+                  "status" => current_version[:status],
+                  "id" => current_version[:id]
               }
           }
         end
