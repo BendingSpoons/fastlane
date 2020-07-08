@@ -119,20 +119,24 @@ module Spaceship
           is_proposed = proposed_versions.key?(language)
           is_active = active_versions.key?(language)
 
-          # BSP: this extra check is needed to avoid calling Apple for nothing if a subscription hasn't changed
+          # BSP: this extra check is needed to avoid calling Apple for nothing if a product's metadata hasn't changed
           next if is_active &&
                   active_versions[language][:name] == current_version[:name] &&
                   active_versions[language][:description] == current_version[:description]
 
-          # BSP: the following is necessary to keep track of the subscription status and id, which would otherwise be
-          # unset by the bunker (since the data is not present in the "value" collection that is passed to this method)
-          status = nil
+          # BSP: the following is necessary to keep track of the product status and id, which might be unset otherwise
+          # (since the data may not be present in the "value" collection that is passed to this method)
+          #
+          # The base status of new IAPs MUST be "proposed", if it's nil App Store Connect will ignore the metadata
+          status = "proposed"
           if is_proposed
             status = proposed_versions[language][:status]
           elsif is_rejected
             status = rejected_versions[language][:status]
           end
 
+          # Note that id=nil is valid only if the product doesn't exist; setting a nil value on an existing product
+          # will result in a crash with ITC.response.error.OPERATION_FAILED
           id = nil
           if is_proposed
             id = proposed_versions[language][:id]
@@ -141,12 +145,11 @@ module Spaceship
           end
 
           new_versions << {
-              id: id,
-              locale_code: language.to_s,
               name: current_version[:name],
               description: current_version[:description],
+              locale_code: language.to_s,
               status: status,
-              publication_name: nil
+              id: id
           }
         end
 
@@ -156,7 +159,6 @@ module Spaceship
                   "name" => { "value" => current_version[:name] },
                   "description" => { "value" => current_version[:description] },
                   "localeCode" => current_version[:locale_code],
-                  "publicationName" => nil,
                   "status" => current_version[:status],
                   "id" => current_version[:id]
               }
@@ -272,7 +274,6 @@ module Spaceship
                       "name" => { "value" => value[:name] },
                       "localeCode" => language.to_s,
                       "status" => value[:status],
-                      "publicationName" => value[:publication_name],
                       "id" => value[:id]
                     }
           }
@@ -288,8 +289,6 @@ module Spaceship
         )
         raw_data.set(["pricingIntervals"], raw_pricing_intervals)
         @raw_pricing_data["subscriptions"] = raw_pricing_intervals if @raw_pricing_data
-
-        raw_data["versions"][0]["reviewNotes"] = { value: @review_notes }
 
         if @merch_screenshot
           # Upload App Store Promotional image (Optional)
@@ -308,7 +307,7 @@ module Spaceship
         client.update_iap!(app_id: application.apple_id, purchase_id: self.purchase_id, data: raw_data)
 
         # Update pricing for a recurring subscription.
-        if @raw_data["addOnType"] == Spaceship::Tunes::IAPType::RECURRING
+        if raw_data["addOnType"] == Spaceship::Tunes::IAPType::RECURRING
           client.update_recurring_iap_pricing!(app_id: application.apple_id, purchase_id: self.purchase_id,
                                                pricing_intervals: raw_data["pricingIntervals"])
 
@@ -360,8 +359,7 @@ module Spaceship
               locale_code: localized_version["value"]["localeCode"],
               name: localized_version["value"]["name"]["value"],
               description: localized_version["value"]["description"]["value"],
-              status: localized_version["value"]["status"],
-              publication_name: localized_version["value"]["publicationName"]
+              status: localized_version["value"]["status"]
           }
         end
 
