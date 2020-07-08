@@ -119,10 +119,13 @@ module Spaceship
           is_proposed = proposed_versions.key?(language)
           is_active = active_versions.key?(language)
 
+          # BSP: this extra check is needed to avoid calling Apple for nothing if a subscription hasn't changed
           next if is_active &&
                   active_versions[language][:name] == current_version[:name] &&
                   active_versions[language][:description] == current_version[:description]
 
+          # BSP: the following is necessary to keep track of the subscription status and id, which would otherwise be
+          # unset by the bunker (since the data is not present in the "value" collection that is passed to this method)
           status = nil
           if is_proposed
             status = proposed_versions[language][:status]
@@ -139,7 +142,7 @@ module Spaceship
 
           new_versions << {
               id: id,
-              locale_code: language,
+              locale_code: language.to_s,
               name: current_version[:name],
               description: current_version[:description],
               status: status,
@@ -268,6 +271,8 @@ module Spaceship
                       "description" => { "value" => value[:description] },
                       "name" => { "value" => value[:name] },
                       "localeCode" => language.to_s,
+                      "status" => value[:status],
+                      "publicationName" => value[:publication_name],
                       "id" => value[:id]
                     }
           }
