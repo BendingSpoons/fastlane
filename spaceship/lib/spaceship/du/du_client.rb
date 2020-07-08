@@ -30,10 +30,6 @@ module Spaceship
       upload_file(app_id: app_id, upload_file: upload_file, path: '/upload/image', content_provider_id: content_provider_id, sso_token: sso_token_for_image, du_validation_rule_set: get_picture_type(upload_file))
     end
 
-    def upload_purchase_promotion_icon(app_id, upload_file, content_provider_id, sso_token_for_image)
-      upload_file(app_id: app_id, upload_file: upload_file, path: '/upload/image', content_provider_id: content_provider_id, sso_token: sso_token_for_image, du_validation_rule_set: 'MZPFT.MerchandisingIAPIcon')
-    end
-
     def upload_large_icon(app_version, upload_file, content_provider_id, sso_token_for_image)
       upload_file(app_version: app_version, upload_file: upload_file, path: '/upload/image', content_provider_id: content_provider_id, sso_token: sso_token_for_image, du_validation_rule_set: 'MZPFT.LargeApplicationIcon')
     end
