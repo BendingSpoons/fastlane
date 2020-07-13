@@ -73,10 +73,29 @@ module Deliver
         localizations = version.get_app_store_version_localizations
       end
 
-      upload_app_previews(previews_per_language, localizations, max_n_threads)
+      upload_app_previews(previews_per_language, localizations, options, max_n_threads)
     end
 
-    def upload_app_previews(previews_per_language, localizations, max_n_threads)
+    def upload_app_previews(previews_per_language, localizations, options, max_n_threads)
+      # Check if should wait for processing
+      # Default to waiting if submitting for review (since needed for submission)
+      # Otherwise use enviroment variable
+      if ENV["DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING"].nil?
+        wait_for_processing = options[:submit_for_review]
+        UI.verbose("Setting wait_for_processing from ':submit_for_review' option")
+      else
+        UI.verbose("Setting wait_for_processing from 'DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING' environment variable")
+        wait_for_processing = !FastlaneCore::Env.truthy?("DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING")
+      end
+
+      if wait_for_processing
+        UI.important("Will wait for screenshot image processing")
+        UI.important("Set env DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING=true to skip waiting for screenshots to process")
+      else
+        UI.important("Skipping the wait for screenshot image processing (which may affect submission)")
+        UI.important("Set env DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING=false to wait for screenshots to process")
+      end
+
       # Upload app previews
       indized = {} # per language and device type
 
@@ -149,7 +168,7 @@ module Deliver
             else
               indized[localization.locale][set.preview_type][:count] += 1
               UI.message("Uploading '#{preview.path}'...")
-              set.upload_preview(path: preview.path)
+              set.upload_preview(path: preview.path, wait_for_processing: wait_for_processing)
             end
           end
         end
