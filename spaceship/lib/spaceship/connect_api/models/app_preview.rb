@@ -80,6 +80,7 @@ module Spaceship
 
         # Update file uploading complete
         patch_attributes = {
+          previewFrameTimeCode: "0",
           uploaded: true,
           sourceFileChecksum: Digest::MD5.hexdigest(bytes)
         }
@@ -102,6 +103,7 @@ module Spaceship
           loop do
             unless preview.video_url.nil?
               puts("Preview processing complete!") if Spaceship::Globals.verbose?
+              break if frame_time_code.nil?
               preview = preview.update(attributes: {
                 previewFrameTimeCode: frame_time_code
               })
