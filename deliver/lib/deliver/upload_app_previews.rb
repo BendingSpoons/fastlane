@@ -96,6 +96,8 @@ module Deliver
         UI.important("Set env DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING=false to wait for screenshots to process")
       end
 
+      frame_time_code = options[:frame_time_code]
+
       # Upload app previews
       indized = {} # per language and device type
 
@@ -168,7 +170,7 @@ module Deliver
             else
               indized[localization.locale][set.preview_type][:count] += 1
               UI.message("Uploading '#{preview.path}'...")
-              set.upload_preview(path: preview.path, wait_for_processing: wait_for_processing)
+              set.upload_preview(path: preview.path, wait_for_processing: wait_for_processing, frame_time_code: frame_time_code)
             end
           end
         end
