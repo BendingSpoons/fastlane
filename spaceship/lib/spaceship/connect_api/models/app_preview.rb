@@ -78,7 +78,7 @@ module Spaceship
 
         # Update file uploading complete
         patch_attributes = {
-          previewFrameTimeCode: "0",
+          previewFrameTimeCode: "00:00:00:00",
           uploaded: true,
           sourceFileChecksum: Digest::MD5.hexdigest(bytes)
         }
