@@ -864,6 +864,7 @@ module Spaceship
         if resp_hash[:status] == 401
           msg = "Auth lost"
           logger.warn(msg)
+          logger.warn(caller)
           raise UnauthorizedAccessError.new, "Unauthorized Access"
         end
 
@@ -878,6 +879,7 @@ module Spaceship
         if resp_hash[:status] == 403
           msg = "Access forbidden"
           logger.warn(msg)
+          logger.warn(caller)
           raise AccessForbiddenError.new, msg
         end
 
