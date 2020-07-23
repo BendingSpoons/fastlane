@@ -129,7 +129,6 @@ module Spaceship
         tries = 1 if Object.const_defined?("SpecHelper")
         response = yield
 
-        tries -= 1
         status = response.status if response
 
         if [500, 504].include?(status)
@@ -139,6 +138,7 @@ module Spaceship
 
         return response
       rescue => error
+        tries -= 1
         puts(error) if Spaceship::Globals.verbose?
         if tries.zero?
           return response
@@ -148,6 +148,8 @@ module Spaceship
       end
 
       def handle_response(response)
+        raise UnexpectedResponse, "Unhandled exception during API call" if response.nil?
+
         if (200...300).cover?(response.status) && (response.body.nil? || response.body.empty?)
           return
         end
