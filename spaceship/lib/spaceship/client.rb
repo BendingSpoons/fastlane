@@ -793,7 +793,7 @@ module Spaceship
       end
     end
 
-    def log_request(method, url, params, headers = nil, &block)
+    def log_request(method, url, params, headers = nil, severity = Logger::INFO, &block)
       url ||= extract_key_from_block('url', &block)
       body = extract_key_from_block('body', &block)
       body_to_log = '[undefined body]'
@@ -814,7 +814,7 @@ module Spaceship
       params_to_log = params_to_log.collect do |key, value|
         "{#{key}: #{value}}"
       end
-      logger.info(">> #{method.upcase} #{url}: #{body_to_log} #{params_to_log.join(', ')}")
+      logger.add(severity, ">> #{method.upcase} #{url}: #{body_to_log} #{params_to_log.join(', ')}")
     end
 
     def log_response(method, url, response, headers = nil, &block)
