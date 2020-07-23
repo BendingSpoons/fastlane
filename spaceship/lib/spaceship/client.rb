@@ -888,7 +888,13 @@ module Spaceship
         response = @client.send(method, url_or_path, params, headers, &block)
         log_response(method, url_or_path, response, headers, &block)
 
-        handle_error(response)
+        resp_hash = response.to_hash
+        if resp_hash[:status] == 401
+          msg = "Auth lost"
+          logger.warn(msg)
+          logger.warn(caller)
+          raise UnauthorizedAccessError.new, "Unauthorized Access"
+        end
 
         if response.body.to_s.include?("<title>302 Found</title>")
           raise AppleTimeoutError.new, "Apple 302 detected - this might be temporary server error, check https://developer.apple.com/system-status/ to see if there is a known downtime"
@@ -896,6 +902,13 @@ module Spaceship
 
         if response.body.to_s.include?("<h3>Bad Gateway</h3>")
           raise BadGatewayError.new, "Apple 502 detected - this might be temporary server error, try again later"
+        end
+
+        if resp_hash[:status] == 403
+          msg = "Access forbidden"
+          logger.warn(msg)
+          logger.warn(caller)
+          raise AccessForbiddenError.new, msg
         end
 
         return response
