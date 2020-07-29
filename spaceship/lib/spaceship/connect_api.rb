@@ -55,6 +55,7 @@ require 'spaceship/connect_api/models/idfa_declaration'
 require 'spaceship/connect_api/models/reset_ratings_request'
 require 'spaceship/connect_api/models/sandbox_tester'
 require 'spaceship/connect_api/models/territory'
+require 'spaceship/connect_api/models/end_user_license_agreement'
 
 module Spaceship
   class ConnectAPI
