@@ -79,4 +79,7 @@ module Spaceship
 
   # Raised when 403 is received from portal request
   class AccessForbiddenError < BasicPreferredInfoError; end
+
+  # Raised when a "VALIDATION_JOB_FAILED" message is received during screenshot upload
+  class ValidationJobFailedError < BasicPreferredInfoError; end
 end
