@@ -18,6 +18,11 @@ class ConnectAPIStubbing
         stub_request(:post, "https://appstoreconnect.apple.com/iris/v1/appStoreVersionReleaseRequests").
           to_return(status: 200, body: read_fixture_file('app_store_version_release_request.json'), headers: { 'Content-Type' => 'application/json' })
       end
+
+      def stub_get_end_user_license_agreement
+        stub_request(:get, "https://appstoreconnect.apple.com/iris/v1/apps/123/endUserLicenseAgreement").
+          to_return(status: 200, body: read_fixture_file('end_user_license_agreement.json'), headers: { 'Content-Type' => 'application/json' })
+      end
     end
   end
 end
