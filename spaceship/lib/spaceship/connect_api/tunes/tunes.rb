@@ -898,6 +898,71 @@ module Spaceship
       end
 
       #
+      # endUserLicenseAgreements
+      #
+
+      def get_end_user_license_agreement(app_id: nil)
+        params = Client.instance.build_params(filter: nil, includes: nil, limit: nil, sort: nil)
+        Client.instance.get("apps/#{app_id}/endUserLicenseAgreement", params)
+      end
+
+      def post_end_user_license_agreement(app_id: nil, attributes: nil, territory_ids: nil)
+        territories_data = territory_ids.map do |id|
+          { type: "territories", id: id }
+        end
+
+        relationships = {
+          app: {
+            data: {
+                type: "apps",
+                id: app_id
+            }
+          },
+          territories: {
+            data: territories_data
+          }
+        }
+
+        body = {
+            data: {
+                type: "endUserLicenseAgreements",
+                attributes: attributes,
+                relationships: relationships
+            }
+        }
+
+        Client.instance.post("endUserLicenseAgreements", body)
+      end
+
+      def patch_end_user_license_agreement(end_user_license_agreement_id: nil, attributes: nil, territory_ids: nil)
+        territories_data = territory_ids.map do |id|
+          { type: "territories", id: id }
+        end
+
+        relationships = {
+          territories: {
+            data: territories_data
+          }
+        }
+
+        body = {
+            data: {
+                type: "endUserLicenseAgreements",
+                id: end_user_license_agreement_id,
+                attributes: attributes,
+                relationships: relationships
+            }
+        }
+
+        Client.instance.patch("endUserLicenseAgreements/#{end_user_license_agreement_id}", body)
+      end
+
+      def delete_end_user_license_agreement(end_user_license_agreement_id: nil)
+        params = Client.instance.build_params(filter: nil, includes: nil, limit: nil, sort: nil)
+        Client.instance.delete("endUserLicenseAgreements/#{end_user_license_agreement_id}", params)
+      end
+
+      #
       # sandboxTesters
       #
 
@@ -929,6 +994,11 @@ module Spaceship
       def get_territories(filter: {}, includes: nil, limit: nil, sort: nil)
         params = Client.instance.build_params(filter: nil, includes: nil, limit: nil, sort: nil)
         Client.instance.get("territories", params)
+      end
+
+      def get_eula_territories(end_user_license_agreement_id: nil)
+        params = Client.instance.build_params(filter: nil, includes: nil, limit: nil, sort: nil)
+        Client.instance.get("endUserLicenseAgreements/#{end_user_license_agreement_id}/territories", params)
       end
     end
   end
