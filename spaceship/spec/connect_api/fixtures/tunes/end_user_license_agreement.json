@@ -1,0 +1,29 @@
+{
+    "data" : {
+      "type" : "endUserLicenseAgreements",
+      "id" : "123456789",
+      "attributes" : {
+        "agreementText": "FastlaneTest"
+      },
+      "relationships" : {
+        "app" : {
+          "links" : {
+            "self" : "https://appstoreconnect.apple.com/iris/v1/endUserLicenseAgreements/123456789/relationships/app",
+            "related" : "https://appstoreconnect.apple.com/iris/v1/endUserLicenseAgreements/123456789/app"
+          }
+        },
+        "territories" : {
+          "links" : {
+            "self" : "https://appstoreconnect.apple.com/iris/v1/endUserLicenseAgreements/123456789/relationships/territories",
+            "related" : "https://appstoreconnect.apple.com/iris/v1/endUserLicenseAgreements/123456789/territories"
+          }
+        }
+      },
+      "links" : {
+        "self" : "https://appstoreconnect.apple.com/iris/v1/endUserLicenseAgreements/123456789"
+      }
+    },
+    "links" : {
+      "self" : "https://appstoreconnect.apple.com/iris/v1/endUserLicenseAgreements"
+    }
+  }
