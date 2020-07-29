@@ -145,12 +145,7 @@ module Spaceship
       def reject_version_if_possible!(platform: nil)
         platform ||= Spaceship::ConnectAPI::Platform::IOS
         filter = {
-          appStoreState: [
-            Spaceship::ConnectAPI::AppStoreVersion::AppStoreState::PENDING_APPLE_RELEASE,
-            Spaceship::ConnectAPI::AppStoreVersion::AppStoreState::PENDING_DEVELOPER_RELEASE,
-            Spaceship::ConnectAPI::AppStoreVersion::AppStoreState::IN_REVIEW,
-            Spaceship::ConnectAPI::AppStoreVersion::AppStoreState::WAITING_FOR_REVIEW
-          ].join(","),
+          appStoreState: Spaceship::ConnectAPI::AppStoreVersion::REJECTABLE_STATES.join(","),
           platform: platform
         }
 
@@ -209,15 +204,21 @@ module Spaceship
       def get_edit_app_store_version(platform: nil, includes: Spaceship::ConnectAPI::AppStoreVersion::ESSENTIAL_INCLUDES)
         platform ||= Spaceship::ConnectAPI::Platform::IOS
         filter = {
-          appStoreState: [
-            Spaceship::ConnectAPI::AppStoreVersion::AppStoreState::PREPARE_FOR_SUBMISSION,
-            Spaceship::ConnectAPI::AppStoreVersion::AppStoreState::DEVELOPER_REJECTED,
-            Spaceship::ConnectAPI::AppStoreVersion::AppStoreState::REJECTED,
-            Spaceship::ConnectAPI::AppStoreVersion::AppStoreState::METADATA_REJECTED,
-            Spaceship::ConnectAPI::AppStoreVersion::AppStoreState::WAITING_FOR_REVIEW,
-            Spaceship::ConnectAPI::AppStoreVersion::AppStoreState::INVALID_BINARY
-          ].join(","),
+          appStoreState: Spaceship::ConnectAPI::AppStoreVersion::EDITABLE_STATES.join(","),
           platform: platform
+        }
+
+        # Get the latest version
+        return get_app_store_versions(filter: filter, includes: includes)
+               .sort_by { |v| Gem::Version.new(v.version_string) }
+               .last
+      end
+
+      def get_in_flight_app_store_version(platform: nil, includes: nil)
+        platform ||= Spaceship::ConnectAPI::Platform::IOS
+        filter = {
+            appStoreState: Spaceship::ConnectAPI::AppStoreVersion::IN_FLIGHT_STATES.join(","),
+            platform: platform
         }
 
         # Get the latest version

@@ -48,6 +48,26 @@ module Spaceship
         SCHEDULED = "SCHEDULED"
       end
 
+      EDITABLE_STATES = [
+        AppStoreState::PREPARE_FOR_SUBMISSION,
+        AppStoreState::DEVELOPER_REJECTED,
+        AppStoreState::REJECTED,
+        AppStoreState::METADATA_REJECTED,
+        AppStoreState::WAITING_FOR_REVIEW,
+        AppStoreState::INVALID_BINARY
+      ]
+
+      IN_FLIGHT_STATES = EDITABLE_STATES + [
+        AppStoreState::IN_REVIEW,
+        AppStoreState::PENDING_DEVELOPER_RELEASE
+      ]
+
+      REJECTABLE_STATES = [
+        AppStoreState::WAITING_FOR_REVIEW,
+        AppStoreState::IN_REVIEW,
+        AppStoreState::PENDING_DEVELOPER_RELEASE
+      ]
+
       attr_mapping({
         "platform" =>  "platform",
         "versionString" =>  "version_string",
