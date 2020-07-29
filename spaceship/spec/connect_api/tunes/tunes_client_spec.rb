@@ -67,5 +67,19 @@ describe Spaceship::ConnectAPI::Tunes::Client do
         end
       end
     end
+
+    describe "endUserLicenseAgreement" do
+      context 'get_end_user_license_agreement' do
+        app_id = "123"
+        let(:path) { "apps/#{app_id}/endUserLicenseAgreement" }
+
+        it 'succeeds' do
+          params = {}
+          req_mock = test_request_params(path, params)
+          expect(client).to receive(:request).with(:get).and_yield(req_mock)
+          Spaceship::ConnectAPI.get_end_user_license_agreement(app_id: app_id)
+        end
+      end
+    end
   end
 end
