@@ -1,6 +1,7 @@
 require_relative '../model'
 require_relative '../file_uploader'
 require_relative './app_screenshot_set'
+require_relative '../../errors'
 require 'spaceship/globals'
 
 require 'digest/md5'
@@ -19,6 +20,8 @@ module Spaceship
       attr_accessor :upload_operations
       attr_accessor :asset_delivery_state
       attr_accessor :uploaded
+
+      MAX_CREATE_RETRIES = 10
 
       attr_mapping({
         "fileSize" => "file_size",
@@ -79,7 +82,40 @@ module Spaceship
       #
       #
 
+      def delete!(filter: {}, includes: nil, limit: nil, sort: nil)
+        Spaceship::ConnectAPI.delete_app_screenshot(app_screenshot_id: id)
+      end
+
       def self.create(app_screenshot_set_id: nil, path: nil, wait_for_processing: true)
+        success = false
+        try_number = 1
+
+        until success
+          begin
+            self.private_create(app_screenshot_set_id: app_screenshot_set_id, path: path, wait_for_processing: wait_for_processing)
+            success = true
+          rescue Spaceship::ValidationJobFailedError => e
+            raise e unless try_number < MAX_CREATE_RETRIES
+
+            # find the screenshot for which the private create failed
+            screenshots = Spaceship::ConnectAPI::AppScreenshotSet
+                          .get(app_screenshot_set_id: app_screenshot_set_id)
+                          .app_screenshots
+            screenshot = screenshots.find(&:error?)
+
+            # try to delete; if it does not exist, retry_api_call will handle the resource not found error
+            Spaceship.retry_api_call do
+              screenshot.delete!
+            end
+
+            try_number += 1
+          end
+        end
+      end
+
+      private_class_method
+
+      def self.private_create(app_screenshot_set_id: nil, path: nil, wait_for_processing: true)
         require 'faraday'
 
         filename = File.basename(path)
@@ -162,7 +198,13 @@ module Spaceship
               break
             elsif screenshot.error?
               messages = ["Error processing screenshot '#{screenshot.file_name}'"] + screenshot.error_messages
-              raise messages.join(". ")
+              error_message = messages.join(". ")
+
+              if error_message =~ /VALIDATION_JOB_FAILED/
+                raise Spaceship::ValidationJobFailedError
+              else
+                raise error_message
+              end
             end
 
             # Poll every 2 seconds
@@ -175,10 +217,6 @@ module Spaceship
         end
 
         return screenshot
-      end
-
-      def delete!(filter: {}, includes: nil, limit: nil, sort: nil)
-        Spaceship::ConnectAPI.delete_app_screenshot(app_screenshot_id: id)
       end
     end
   end
