@@ -1,5 +1,6 @@
 require_relative '../model'
 require_relative './build'
+require_relative './end_user_license_agreement'
 
 module Spaceship
   class ConnectAPI
@@ -309,6 +310,21 @@ module Spaceship
       def update_beta_group(beta_group, public_link_enabled: nil, public_link_limit: nil, public_link_limit_enabled: nil)
         resps = Spaceship::ConnectAPI.update_beta_group(beta_group.id, public_link_enabled: public_link_enabled, public_link_limit: public_link_limit, public_link_limit_enabled: public_link_limit_enabled)
         Spaceship::ConnectAPI::Models.parse(resps.body)
+      end
+
+      #
+      # End User License Agreements
+      #
+
+      def create_end_user_license_agreement(attributes, territory_ids: nil)
+        attributes = Spaceship::ConnectAPI::EndUserLicenseAgreement.reverse_attr_mapping(attributes)
+        resp = Spaceship::ConnectAPI.post_end_user_license_agreement(app_id: id, attributes: attributes, territory_ids: territory_ids)
+        return resp.to_models.first
+      end
+
+      def fetch_end_user_license_agreement
+        resp = Spaceship::ConnectAPI.get_end_user_license_agreement(app_id: id)
+        return resp.to_models.first
       end
 
       #
