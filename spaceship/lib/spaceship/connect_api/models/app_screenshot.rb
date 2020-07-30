@@ -98,11 +98,7 @@ module Spaceship
           rescue Spaceship::ValidationJobFailedError => e
             raise e unless try_number < MAX_CREATE_RETRIES
 
-            # find the screenshot for which the private create failed
-            screenshots = Spaceship::ConnectAPI::AppScreenshotSet
-                          .get(app_screenshot_set_id: app_screenshot_set_id)
-                          .app_screenshots
-            screenshot = screenshots.find(&:error?)
+            screenshot = e.screenshot
 
             # try to delete; if it does not exist, retry_api_call will handle the resource not found error
             Spaceship.retry_api_call do
@@ -202,7 +198,7 @@ module Spaceship
               error_message = messages.join(". ")
 
               if error_message =~ /VALIDATION_JOB_FAILED/
-                raise Spaceship::ValidationJobFailedError
+                raise Spaceship::ValidationJobFailedError.new(error_message, screenshot)
               else
                 raise error_message
               end

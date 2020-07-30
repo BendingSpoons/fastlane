@@ -81,5 +81,12 @@ module Spaceship
   class AccessForbiddenError < BasicPreferredInfoError; end
 
   # Raised when a "VALIDATION_JOB_FAILED" message is received during screenshot upload
-  class ValidationJobFailedError < BasicPreferredInfoError; end
+  class ValidationJobFailedError < BasicPreferredInfoError
+    attr_reader :screenshot
+
+    def initialize(error_message = nil, screenshot = nil)
+      @screenshot = screenshot
+      super(error_message)
+    end
+  end
 end
