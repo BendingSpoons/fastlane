@@ -28,26 +28,7 @@ module Deliver
       localizations = version.get_app_store_version_localizations
 
       if options[:overwrite_app_previews]
-        # Get localizations on version
-        n_threads = [max_n_threads, localizations.length].min
-        Parallel.each(localizations, in_threads: n_threads) do |localization|
-          # Only delete app previews if trying to upload
-          next unless previews_per_language.keys.include?(localization.locale)
-
-          # Iterate over all app previews for each set and delete
-          previews_sets = localization.get_app_preview_sets
-
-          # Multi threading delete on single localization
-          previews_sets.each do |preview_set|
-            UI.message("Removing all previously uploaded app previews for '#{localization.locale}' '#{preview_set.preview_type}'...")
-            preview_set.app_previews.each do |preview|
-              Deliver.retry_api_call do
-                UI.verbose("Deleting app preview - #{localization.locale} #{preview_set.preview_type} #{preview.id}")
-                preview.delete!
-              end
-            end
-          end
-        end
+        delete_app_previews(localizations, previews_per_language, max_n_threads)
       end
 
       # Finding languages to enable
@@ -72,6 +53,58 @@ module Deliver
       end
 
       upload_app_previews(previews_per_language, localizations, options, max_n_threads)
+    end
+
+    def delete_app_previews(localizations, previews_per_language, max_n_threads, tries: 5)
+      tries -= 1
+
+      # Get localizations on version
+      n_threads = [max_n_threads, localizations.length].min
+      Parallel.each(localizations, in_threads: n_threads) do |localization|
+        # Only delete app previews if trying to upload
+        next unless previews_per_language.keys.include?(localization.locale)
+
+        # Iterate over all app previews for each set and delete
+        previews_sets = localization.get_app_preview_sets
+
+        # Multi threading delete on single localization
+        previews_sets.each do |preview_set|
+          UI.message("Removing all previously uploaded app previews for '#{localization.locale}' '#{preview_set.preview_type}'...")
+          preview_set.app_previews.each do |preview|
+            Deliver.retry_api_call do
+              UI.verbose("Deleting app preview - #{localization.locale} #{preview_set.preview_type} #{preview.id}")
+              preview.delete!
+            end
+          end
+        end
+      end
+
+      # Verify all previews have been deleted
+      # Sometimes API requests will fail but the previews will still be deleted
+      count = count_previews(localizations)
+      UI.important("Number of previews not deleted: #{count}")
+      if count > 0
+        if tries.zero?
+          UI.user_error!("Failed verification of all previews deleted... #{count} preview(s) still exist")
+        else
+          UI.error("Failed to delete all previews... Tries remaining: #{tries}")
+          delete_app_previews(localizations, previews_per_language, tries: tries)
+        end
+      else
+        UI.message("Successfully deleted all previews")
+      end
+    end
+
+    def count_previews(localizations)
+      count = 0
+      localizations.each do |localization|
+        preview_sets = localization.get_app_preview_sets
+        preview_sets.each do |preview_set|
+          count += preview_set.app_previews.size
+        end
+      end
+
+      count
     end
 
     def upload_app_previews(previews_per_language, localizations, options, max_n_threads)
