@@ -22,7 +22,7 @@ module Spaceship
       attr_accessor :asset_delivery_state
       attr_accessor :uploaded
 
-      MAX_CREATE_RETRIES = 10
+      INITIAL_REMAINING_TRIES = 10
 
       attr_mapping({
         "fileSize" => "file_size",
@@ -83,31 +83,26 @@ module Spaceship
       #
       #
 
-      def delete!(filter: {}, includes: nil, limit: nil, sort: nil)
-        Spaceship::ConnectAPI.delete_app_screenshot(app_screenshot_id: id)
-      end
-
       def self.create(app_screenshot_set_id: nil, path: nil, wait_for_processing: true)
         success = false
-        try_number = 1
+        remaining_tries = INITIAL_REMAINING_TRIES
 
         until success
           begin
-            self.private_create(app_screenshot_set_id: app_screenshot_set_id, path: path, wait_for_processing: wait_for_processing)
+            private_create(app_screenshot_set_id: app_screenshot_set_id, path: path, wait_for_processing: wait_for_processing)
             success = true
           rescue Spaceship::ValidationJobFailedError => e
-            raise e unless try_number < MAX_CREATE_RETRIES
-
-            screenshot = e.screenshot
+            remaining_tries -= 1
+            raise e unless remaining_tries > 0
 
             # try to delete; if it does not exist, retry_api_call will handle the resource not found error
-            Spaceship.retry_api_call do
-              screenshot.delete!
-            end
-
-            try_number += 1
+            Spaceship.retry_api_call { e.screenshot.delete! }
           end
         end
+      end
+
+      def delete!(filter: {}, includes: nil, limit: nil, sort: nil)
+        Spaceship::ConnectAPI.delete_app_screenshot(app_screenshot_id: id)
       end
 
       private_class_method
