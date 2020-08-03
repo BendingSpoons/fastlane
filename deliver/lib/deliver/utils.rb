@@ -25,9 +25,14 @@ module Deliver
         # attempted again. We never get this on a failed creation.
         if e.message =~ /The specified resource does not exist/
           success = true
+        elsif e.message =~ /appScreenshotSets doesn't exist/
+          UI.error("Error while interacting with App Store Connect API, making a new attempt. Error: #{e.message}. Counter: #{try_number}")
+          try_number += 1
         else
           raise e
         end
+
+        raise Spaceship::TunesClient::ITunesConnectPotentialServerError.new, "Number of retries exceeded, aborting." if try_number > MAX_RETRIES
       end
     end
   end
