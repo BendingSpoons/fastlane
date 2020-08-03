@@ -1,5 +1,6 @@
 require_relative '../model'
 require_relative '../file_uploader'
+require_relative '../../errors'
 require_relative './app_screenshot_set'
 require 'spaceship/globals'
 
@@ -97,7 +98,7 @@ module Spaceship
             app_screenshot_set_id: app_screenshot_set_id,
             attributes: post_attributes
           ).first
-        rescue => error
+        rescue InternalServerError => error
           # Sometimes creating a screenshot with the web session App Store Connect API
           # will result in a false failure. The response will return a 503 but the database
           # insert will eventually go through.
