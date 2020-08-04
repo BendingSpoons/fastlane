@@ -15,9 +15,6 @@ module Spaceship
       attr_accessor :support_url
       attr_accessor :whats_new
 
-      attr_accessor :app_screenshot_sets
-      attr_accessor :app_preview_sets
-
       attr_mapping({
         "description" =>  "description",
         "locale" =>  "locale",
@@ -25,10 +22,7 @@ module Spaceship
         "marketingUrl" =>  "marketing_url",
         "promotionalText" =>  "promotional_text",
         "supportUrl" =>  "support_url",
-        "whatsNew" =>  "whats_new",
-
-        "appScreenshotSets" =>  "app_screenshot_sets",
-        "appPreviewSets" =>  "app_preview_sets"
+        "whatsNew" =>  "whats_new"
       })
 
       def self.type
@@ -38,11 +32,6 @@ module Spaceship
       #
       # API
       #
-
-      def self.all(filter: {}, includes: nil, limit: nil, sort: nil)
-        resp = Spaceship::ConnectAPI.get_app_store_version_localizations(filter: filter, includes: includes, limit: limit, sort: sort)
-        return resp.to_models
-      end
 
       def update(attributes: nil)
         attributes = reverse_attr_mapping(attributes)
@@ -58,9 +47,8 @@ module Spaceship
       #
 
       def get_app_preview_sets(filter: {}, includes: "appPreviews", limit: nil, sort: nil)
-        filter ||= {}
-        filter["appStoreVersionLocalization"] = id
-        return Spaceship::ConnectAPI::AppPreviewSet.all(filter: filter, includes: includes, limit: limit, sort: sort)
+        resp = Spaceship::ConnectAPI.get_app_preview_sets(app_store_version_localization_id: id, filter: filter, includes: includes, limit: limit, sort: sort)
+        return resp.to_models
       end
 
       def create_app_preview_set(attributes: nil)
@@ -73,9 +61,8 @@ module Spaceship
       #
 
       def get_app_screenshot_sets(filter: {}, includes: "appScreenshots", limit: nil, sort: nil)
-        filter ||= {}
-        filter["appStoreVersionLocalization"] = id
-        return Spaceship::ConnectAPI::AppScreenshotSet.all(filter: filter, includes: includes, limit: limit, sort: sort)
+        resp = Spaceship::ConnectAPI.get_app_screenshot_sets(app_store_version_localization_id: id, filter: filter, includes: includes, limit: limit, sort: sort)
+        return resp.to_models
       end
 
       def create_app_screenshot_set(attributes: nil)

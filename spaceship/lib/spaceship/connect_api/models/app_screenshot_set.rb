@@ -112,11 +112,6 @@ module Spaceship
       # API
       #
 
-      def self.all(filter: {}, includes: nil, limit: nil, sort: nil)
-        resp = Spaceship::ConnectAPI.get_app_screenshot_sets(filter: filter, includes: includes, limit: limit, sort: sort)
-        return resp.to_models
-      end
-
       def self.get(app_screenshot_set_id: nil, includes: "appScreenshots")
         return Spaceship::ConnectAPI.get_app_screenshot_set(app_screenshot_set_id: app_screenshot_set_id, filter: nil, includes: includes, limit: nil, sort: nil).first
       end
