@@ -68,9 +68,8 @@ module Spaceship
 
       def get_app_preview_sets(client: nil, filter: {}, includes: "appPreviews", limit: nil, sort: nil)
         client ||= Spaceship::ConnectAPI
-        filter ||= {}
-        filter["appStoreVersionLocalization"] = id
-        return Spaceship::ConnectAPI::AppPreviewSet.all(client: client, filter: filter, includes: includes, limit: limit, sort: sort)
+        resp = client.get_app_preview_sets(app_store_version_localization_id: id, filter: filter, includes: includes, limit: limit, sort: sort)
+        return resp.to_models
       end
 
       def create_app_preview_set(client: nil, attributes: nil)
