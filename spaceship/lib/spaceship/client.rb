@@ -905,7 +905,8 @@ module Spaceship
         end
 
         if resp_hash[:status] == 403
-          msg = "Access forbidden"
+          msg = "Access forbidden: "
+          msg += response.body.nil? ? "[no response body]" : response.body.to_s
           logger.warn(msg)
           logger.warn(caller)
           raise AccessForbiddenError.new, msg
