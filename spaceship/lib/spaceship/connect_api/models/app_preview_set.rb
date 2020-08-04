@@ -58,11 +58,6 @@ module Spaceship
       # API
       #
 
-      def self.all(filter: {}, includes: nil, limit: nil, sort: nil)
-        resp = Spaceship::ConnectAPI.get_app_preview_sets(filter: filter, includes: includes, limit: limit, sort: sort)
-        return resp.to_models
-      end
-
       def self.get(app_preview_set_id: nil, includes: "appPreviews")
         return Spaceship::ConnectAPI.get_app_preview_set(app_preview_set_id: app_preview_set_id, filter: nil, includes: includes, limit: nil, sort: nil).first
       end
