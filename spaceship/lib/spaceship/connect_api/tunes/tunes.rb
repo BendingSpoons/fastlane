@@ -236,9 +236,9 @@ module Spaceship
       # appPreviewSets
       #
 
-      def get_app_preview_sets(filter: {}, includes: nil, limit: nil, sort: nil)
+      def get_app_preview_sets(app_store_version_localization_id: nil, filter: {}, includes: nil, limit: nil, sort: nil)
         params = Client.instance.build_params(filter: filter, includes: includes, limit: limit, sort: sort)
-        Client.instance.get("appPreviewSets", params)
+        Client.instance.get("appStoreVersionLocalizations/#{app_store_version_localization_id}/appPreviewSets", params)
       end
 
       def get_app_preview_set(app_preview_set_id: nil, filter: {}, includes: nil, limit: nil, sort: nil)
@@ -342,9 +342,9 @@ module Spaceship
       # appScreenshotSets
       #
 
-      def get_app_screenshot_sets(filter: {}, includes: nil, limit: nil, sort: nil)
+      def get_app_screenshot_sets(app_store_version_localization_id: nil, filter: {}, includes: nil, limit: nil, sort: nil)
         params = Client.instance.build_params(filter: filter, includes: includes, limit: limit, sort: sort)
-        Client.instance.get("appScreenshotSets", params)
+        Client.instance.get("appStoreVersionLocalizations/#{app_store_version_localization_id}/appScreenshotSets", params)
       end
 
       def get_app_screenshot_set(app_screenshot_set_id: nil, filter: {}, includes: nil, limit: nil, sort: nil)
@@ -623,9 +623,9 @@ module Spaceship
       # appStoreVersionLocalizations
       #
 
-      def get_app_store_version_localizations(filter: {}, includes: nil, limit: nil, sort: nil)
-        params = Client.instance.build_params(filter: filter, includes: includes, limit: limit, sort: sort)
-        Client.instance.get("appStoreVersionLocalizations", params)
+      def get_app_store_version_localizations(app_store_version_id: nil, limit: nil)
+        params = Client.instance.build_params(filter: nil, includes: nil, limit: limit, sort: nil)
+        Client.instance.get("appStoreVersions/#{app_store_version_id}/appStoreVersionLocalizations", params)
       end
 
       def post_app_store_version_localization(app_store_version_id: nil, attributes: {})
