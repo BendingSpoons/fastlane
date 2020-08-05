@@ -85,14 +85,14 @@ module Spaceship
             attributes: post_attributes
           ).first
         rescue Spaceship::InternalServerError => error
-          # Sometimes creating a screenshot with the web session App Store Connect API
+          # Sometimes creating a preview with the web session App Store Connect API
           # will result in a false failure. The response will return a 503 but the database
           # insert will eventually go through.
           #
-          # When this is observed, we will poll until we find the matchin screenshot that
+          # When this is observed, we will poll until we find the matching preview that
           # is awaiting for upload and file size
           #
-          # https://github.com/fastlane/fastlane/pull/16842
+          # The equivalent for the screenshots: https://github.com/fastlane/fastlane/pull/16842
           time = Time.now.to_i
 
           timeout_minutes = (ENV["SPACESHIP_SCREENSHOT_UPLOAD_TIMEOUT"] || 20).to_i
