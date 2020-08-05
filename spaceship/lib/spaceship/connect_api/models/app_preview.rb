@@ -95,7 +95,7 @@ module Spaceship
           # The equivalent for the screenshots: https://github.com/fastlane/fastlane/pull/16842
           time = Time.now.to_i
 
-          timeout_minutes = (ENV["SPACESHIP_SCREENSHOT_UPLOAD_TIMEOUT"] || 20).to_i
+          timeout_minutes = (ENV["SPACESHIP_PREVIEW_UPLOAD_TIMEOUT"] || 20).to_i
 
           loop do
             puts("Waiting for preview to appear before uploading...")
