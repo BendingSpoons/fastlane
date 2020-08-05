@@ -111,20 +111,20 @@ module Deliver
       # Check if should wait for processing
       # Default to waiting if submitting for review (since needed for submission)
       # Otherwise use enviroment variable
-      if ENV["DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING"].nil?
+      if ENV["DELIVER_SKIP_WAIT_FOR_PREVIEW_PROCESSING"].nil?
         wait_for_processing = options[:submit_for_review]
         UI.verbose("Setting wait_for_processing from ':submit_for_review' option")
       else
-        UI.verbose("Setting wait_for_processing from 'DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING' environment variable")
-        wait_for_processing = !FastlaneCore::Env.truthy?("DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING")
+        UI.verbose("Setting wait_for_processing from 'DELIVER_SKIP_WAIT_FOR_PREVIEW_PROCESSING' environment variable")
+        wait_for_processing = !FastlaneCore::Env.truthy?("DELIVER_SKIP_WAIT_FOR_PREVIEW_PROCESSING")
       end
 
       if wait_for_processing
-        UI.important("Will wait for screenshot image processing")
-        UI.important("Set env DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING=true to skip waiting for screenshots to process")
+        UI.important("Will wait for preview video processing")
+        UI.important("Set env DELIVER_SKIP_WAIT_FOR_PREVIEW_PROCESSING=true to skip waiting for previews to process")
       else
-        UI.important("Skipping the wait for screenshot image processing (which may affect submission)")
-        UI.important("Set env DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING=false to wait for screenshots to process")
+        UI.important("Skipping the wait for preview video processing (which may affect submission)")
+        UI.important("Set env DELIVER_SKIP_WAIT_FOR_PREVIEW_PROCESSING=false to wait for previews to process")
       end
 
       frame_time_code = options[:frame_time_code]
