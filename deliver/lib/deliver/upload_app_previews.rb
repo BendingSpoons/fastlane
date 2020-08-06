@@ -28,26 +28,7 @@ module Deliver
       localizations = version.get_app_store_version_localizations
 
       if options[:overwrite_app_previews]
-        # Get localizations on version
-        n_threads = [max_n_threads, localizations.length].min
-        Parallel.each(localizations, in_threads: n_threads) do |localization|
-          # Only delete app previews if trying to upload
-          next unless previews_per_language.keys.include?(localization.locale)
-
-          # Iterate over all app previews for each set and delete
-          previews_sets = localization.get_app_preview_sets
-
-          # Multi threading delete on single localization
-          previews_sets.each do |preview_set|
-            UI.message("Removing all previously uploaded app previews for '#{localization.locale}' '#{preview_set.preview_type}'...")
-            preview_set.app_previews.each do |preview|
-              Deliver.retry_api_call do
-                UI.verbose("Deleting app preview - #{localization.locale} #{preview_set.preview_type} #{preview.id}")
-                preview.delete!
-              end
-            end
-          end
-        end
+        delete_app_previews(localizations, previews_per_language, max_n_threads)
       end
 
       # Finding languages to enable
@@ -74,24 +55,76 @@ module Deliver
       upload_app_previews(previews_per_language, localizations, options, max_n_threads)
     end
 
+    def delete_app_previews(localizations, previews_per_language, max_n_threads, tries: 5)
+      tries -= 1
+
+      # Get localizations on version
+      n_threads = [max_n_threads, localizations.length].min
+      Parallel.each(localizations, in_threads: n_threads) do |localization|
+        # Only delete app previews if trying to upload
+        next unless previews_per_language.keys.include?(localization.locale)
+
+        # Iterate over all app previews for each set and delete
+        previews_sets = localization.get_app_preview_sets
+
+        # Multi threading delete on single localization
+        previews_sets.each do |preview_set|
+          UI.message("Removing all previously uploaded app previews for '#{localization.locale}' '#{preview_set.preview_type}'...")
+          preview_set.app_previews.each do |preview|
+            Deliver.retry_api_call do
+              UI.verbose("Deleting app preview - #{localization.locale} #{preview_set.preview_type} #{preview.id}")
+              preview.delete!
+            end
+          end
+        end
+      end
+
+      # Verify all previews have been deleted
+      # Sometimes API requests will fail but the previews will still be deleted
+      count = count_previews(localizations)
+      UI.important("Number of previews not deleted: #{count}")
+      if count > 0
+        if tries.zero?
+          UI.user_error!("Failed verification of all previews deleted... #{count} preview(s) still exist")
+        else
+          UI.error("Failed to delete all previews... Tries remaining: #{tries}")
+          delete_app_previews(localizations, previews_per_language, tries: tries)
+        end
+      else
+        UI.message("Successfully deleted all previews")
+      end
+    end
+
+    def count_previews(localizations)
+      count = 0
+      localizations.each do |localization|
+        preview_sets = localization.get_app_preview_sets
+        preview_sets.each do |preview_set|
+          count += preview_set.app_previews.size
+        end
+      end
+
+      count
+    end
+
     def upload_app_previews(previews_per_language, localizations, options, max_n_threads)
       # Check if should wait for processing
       # Default to waiting if submitting for review (since needed for submission)
       # Otherwise use enviroment variable
-      if ENV["DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING"].nil?
+      if ENV["DELIVER_SKIP_WAIT_FOR_PREVIEW_PROCESSING"].nil?
         wait_for_processing = options[:submit_for_review]
         UI.verbose("Setting wait_for_processing from ':submit_for_review' option")
       else
-        UI.verbose("Setting wait_for_processing from 'DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING' environment variable")
-        wait_for_processing = !FastlaneCore::Env.truthy?("DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING")
+        UI.verbose("Setting wait_for_processing from 'DELIVER_SKIP_WAIT_FOR_PREVIEW_PROCESSING' environment variable")
+        wait_for_processing = !FastlaneCore::Env.truthy?("DELIVER_SKIP_WAIT_FOR_PREVIEW_PROCESSING")
       end
 
       if wait_for_processing
-        UI.important("Will wait for screenshot image processing")
-        UI.important("Set env DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING=true to skip waiting for screenshots to process")
+        UI.important("Will wait for preview video processing")
+        UI.important("Set env DELIVER_SKIP_WAIT_FOR_PREVIEW_PROCESSING=true to skip waiting for previews to process")
       else
-        UI.important("Skipping the wait for screenshot image processing (which may affect submission)")
-        UI.important("Set env DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING=false to wait for screenshots to process")
+        UI.important("Skipping the wait for preview video processing (which may affect submission)")
+        UI.important("Set env DELIVER_SKIP_WAIT_FOR_PREVIEW_PROCESSING=false to wait for previews to process")
       end
 
       frame_time_code = options[:frame_time_code]
