@@ -2,6 +2,7 @@ require_relative '../model'
 require_relative '../file_uploader'
 require_relative '../../errors'
 require_relative './app_screenshot_set'
+require_relative '../../errors'
 require 'spaceship/globals'
 
 require 'digest/md5'
@@ -20,6 +21,8 @@ module Spaceship
       attr_accessor :upload_operations
       attr_accessor :asset_delivery_state
       attr_accessor :uploaded
+
+      INITIAL_REMAINING_TRIES = 10
 
       attr_mapping({
         "fileSize" => "file_size",
@@ -81,6 +84,30 @@ module Spaceship
       #
 
       def self.create(app_screenshot_set_id: nil, path: nil, wait_for_processing: true)
+        success = false
+        remaining_tries = INITIAL_REMAINING_TRIES
+
+        until success
+          begin
+            private_create(app_screenshot_set_id: app_screenshot_set_id, path: path, wait_for_processing: wait_for_processing)
+            success = true
+          rescue Spaceship::ValidationJobFailedError => e
+            remaining_tries -= 1
+            raise e unless remaining_tries > 0
+
+            # try to delete; if it does not exist, retry_api_call will handle the resource not found error
+            Spaceship.retry_api_call { e.screenshot.delete! }
+          end
+        end
+      end
+
+      def delete!(filter: {}, includes: nil, limit: nil, sort: nil)
+        Spaceship::ConnectAPI.delete_app_screenshot(app_screenshot_id: id)
+      end
+
+      private_class_method
+
+      def self.private_create(app_screenshot_set_id: nil, path: nil, wait_for_processing: true)
         require 'faraday'
 
         filename = File.basename(path)
@@ -163,7 +190,13 @@ module Spaceship
               break
             elsif screenshot.error?
               messages = ["Error processing screenshot '#{screenshot.file_name}'"] + screenshot.error_messages
-              raise messages.join(". ")
+              error_message = messages.join(". ")
+
+              if error_message =~ /VALIDATION_JOB_FAILED/
+                raise Spaceship::ValidationJobFailedError.new(error_message, screenshot)
+              else
+                raise error_message
+              end
             end
 
             # Poll every 2 seconds
@@ -176,10 +209,6 @@ module Spaceship
         end
 
         return screenshot
-      end
-
-      def delete!(filter: {}, includes: nil, limit: nil, sort: nil)
-        Spaceship::ConnectAPI.delete_app_screenshot(app_screenshot_id: id)
       end
     end
   end
