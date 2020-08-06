@@ -221,8 +221,8 @@ module Deliver
 
           # Skip if there are no checksums for the specified locale and device type
           next unless checksums_for_locale.keys.include?(device_type)
-          checksums_for_device_type = checksums_for_locale[device_type]
-          UI.message("Removing specified screenshots for '#{localization.locale}' '#{device_type}'...")
+          checksums_for_device_type = checksums_for_locale[device_type][:checksums]
+          UI.message("Removing #{checksums_for_device_type.size} screenshots for '#{localization.locale}' '#{device_type}'...")
 
           screenshot_set.app_screenshots.each do |screenshot|
             next unless checksums_for_device_type.include?(screenshot.source_file_checksum)
