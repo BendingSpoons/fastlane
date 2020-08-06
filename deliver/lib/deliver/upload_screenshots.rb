@@ -305,10 +305,11 @@ module Deliver
           app_screenshot_sets_map[app_screenshot_set.screenshot_display_type] = app_screenshot_set
         end
 
-        screenshots_per_device_type.each do |device_type, screenshots_with_checksums|
-          UI.message("Uploading #{screenshots_with_checksums.length} screenshots for language #{language}")
-          screenshots_with_checksums.each do |screenshot_with_checksum|
-            screenshot = screenshot_with_checksum[:screenshot]
+        screenshots_per_device_type.each do |device_type, screenshots_with_positions|
+          UI.message("Uploading #{screenshots_with_positions.length} screenshots for language #{language}")
+          screenshots_with_positions.each do |screenshot_with_position|
+            screenshot = screenshot_with_position[:screenshot]
+            position = screenshot_with_position[:position]
             set = app_screenshot_sets_map[device_type]
 
             unless set
@@ -320,7 +321,7 @@ module Deliver
 
             Deliver.retry_api_call do
               UI.message("Uploading '#{screenshot.path}'...")
-              set.upload_screenshot(path: screenshot.path, wait_for_processing: wait_for_processing)
+              set.upload_screenshot(path: screenshot.path, wait_for_processing: wait_for_processing, position: position)
             end
           end
         end
