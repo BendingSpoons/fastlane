@@ -30,9 +30,7 @@ module Deliver
       updated_sets_per_language = get_updated_screenshots(localizations, screenshots_per_language)
       checksums_to_delete = get_checksums_to_delete(localizations, updated_sets_per_language)
 
-      if options[:overwrite_screenshots]
-        delete_screenshots(localizations, checksums_to_delete, max_n_threads)
-      end
+      delete_screenshots(localizations, checksums_to_delete, max_n_threads)
 
       # Finding languages to enable
       languages = screenshots_per_language.keys
