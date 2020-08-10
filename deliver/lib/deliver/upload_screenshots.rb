@@ -90,7 +90,7 @@ module Deliver
       # remove any duplicate by comparing checksums, keep the first occurrence only
       sets_per_language.values.each do |screenshots_per_device_type|
         screenshots_per_device_type.values.each do |screenshots_with_checksums|
-          screenshots_with_checksums.uniq! {|screenshot| screenshot[:checksum]}
+          screenshots_with_checksums.uniq! { |screenshot| screenshot[:checksum] }
         end
       end
 
@@ -129,6 +129,19 @@ module Deliver
                 screenshot: screenshot_with_checksum[:screenshot],
                 position: index
             }
+          end
+
+          # if there are more existing screenshots, it means some need to be deleted without replacing them
+          next unless existing_screenshots.size > screenshots_with_checksums.size
+
+          index = screenshots_with_checksums.size
+          while index < screenshots_with_checksums.size
+            # add a "nil" screenshot for every position that will no longer be filled (in order to delete them)
+            updated_screenshots_per_device_type[device_type] << {
+                screenshot: nil,
+                position: index
+            }
+            index += 1
           end
         end
 
@@ -308,6 +321,10 @@ module Deliver
           UI.message("Uploading #{screenshots_with_positions.length} screenshots for language #{language}")
           screenshots_with_positions.each do |screenshot_with_position|
             screenshot = screenshot_with_position[:screenshot]
+
+            # don't upload the empty screenshots that represent the no-longer filled positions
+            next if screenshot.nil?
+
             position = screenshot_with_position[:position]
             set = app_screenshot_sets_map[device_type]
 
