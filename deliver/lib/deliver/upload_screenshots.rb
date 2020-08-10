@@ -87,6 +87,13 @@ module Deliver
         sets_per_language[language] = screenshots_per_device_type
       end
 
+      # remove any duplicate by comparing checksums, keep the first occurrence only
+      sets_per_language.values.each do |screenshots_per_device_type|
+        screenshots_per_device_type.values.each do |screenshots_with_checksums|
+          screenshots_with_checksums.uniq! {|screenshot| screenshot[:checksum]}
+        end
+      end
+
       # then, compare the new screenshots with the existing ones
       sets_per_language.each do |language, screenshots_per_device_type|
         updated_screenshots_per_device_type = {}
@@ -109,19 +116,11 @@ module Deliver
           existing_screenshots = app_screenshot_sets_map[device_type].app_screenshots
           updated_screenshots_per_device_type[device_type] ||= []
 
-          temp_checksums = []
           screenshots_with_checksums.each_with_index do |screenshot_with_checksum, index|
             if index >= 10
               UI.error("Too many screenshots found for device '#{device_type}' in '#{language}', skipping this one (#{screenshot_with_checksum[:screenshot].path})")
               next
             end
-
-            # skip over duplicates
-            if temp_checksums.include?(screenshot_with_checksum[:checksum])
-              UI.message("Duplicate found. Skipping '#{screenshot.path}'...")
-              next
-            end
-            temp_checksums << screenshot_with_checksum[:checksum]
 
             existing_screenshot = existing_screenshots[index]
             next unless existing_screenshot.nil? || existing_screenshot.source_file_checksum != screenshot_with_checksum[:checksum]
