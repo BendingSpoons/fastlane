@@ -316,7 +316,7 @@ module Deliver
         end
 
         screenshots_per_device_type.each do |device_type, screenshots_with_positions|
-          UI.message("Uploading #{screenshots_with_positions.length} screenshots for language #{language}")
+          UI.message("Uploading #{screenshots_with_positions.length} screenshots for '#{language}', '#{device_type}'")
           screenshots_with_positions.each do |screenshot_with_position|
             screenshot = screenshot_with_position[:screenshot]
 
