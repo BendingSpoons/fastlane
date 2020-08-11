@@ -63,6 +63,8 @@ module Deliver
       Parallel.each(localizations, in_threads: n_threads) do |localization|
         # Iterate over all screenshots for each set and delete
         screenshot_sets = localization.get_app_screenshot_sets
+
+        # Multi threading delete on single localization
         screenshot_sets.each do |screenshot_set|
           UI.message("Removing all previously uploaded screenshots for '#{localization.locale}' '#{screenshot_set.screenshot_display_type}'...")
           screenshot_set.app_screenshots.each do |screenshot|
