@@ -61,9 +61,6 @@ module Deliver
       # Get localizations on version
       n_threads = [max_n_threads, localizations.length].min
       Parallel.each(localizations, in_threads: n_threads) do |localization|
-        # Only delete app previews if trying to upload
-        next unless previews_per_language.keys.include?(localization.locale)
-
         # Iterate over all app previews for each set and delete
         previews_sets = localization.get_app_preview_sets
 
@@ -88,7 +85,7 @@ module Deliver
           UI.user_error!("Failed verification of all previews deleted... #{count} preview(s) still exist")
         else
           UI.error("Failed to delete all previews... Tries remaining: #{tries}")
-          delete_app_previews(localizations, previews_per_language, tries: tries)
+          delete_app_previews(localizations, previews_per_language, max_n_threads, tries: tries)
         end
       else
         UI.message("Successfully deleted all previews")
