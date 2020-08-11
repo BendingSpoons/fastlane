@@ -61,13 +61,8 @@ module Deliver
       # Get localizations on version
       n_threads = [max_n_threads, localizations.length].min
       Parallel.each(localizations, in_threads: n_threads) do |localization|
-        # Only delete screenshots if trying to upload
-        next unless screenshots_per_language.keys.include?(localization.locale)
-
         # Iterate over all screenshots for each set and delete
         screenshot_sets = localization.get_app_screenshot_sets
-
-        # Multi threading delete on single localization
         screenshot_sets.each do |screenshot_set|
           UI.message("Removing all previously uploaded screenshots for '#{localization.locale}' '#{screenshot_set.screenshot_display_type}'...")
           screenshot_set.app_screenshots.each do |screenshot|
@@ -89,7 +84,7 @@ module Deliver
           UI.user_error!("Failed verification of all screenshots deleted... #{count} screenshot(s) still exist")
         else
           UI.error("Failed to delete all screenshots... Tries remaining: #{tries}")
-          delete_screenshots(localizations, screenshots_per_language, tries: tries)
+          delete_screenshots(localizations, screenshots_per_language, max_n_threads, tries: tries)
         end
       else
         UI.message("Successfully deleted all screenshots")
@@ -101,6 +96,7 @@ module Deliver
       localizations.each do |localization|
         screenshot_sets = localization.get_app_screenshot_sets
         screenshot_sets.each do |screenshot_set|
+          UI.message("In count, #{localization.locale}:#{screenshot_set.screenshot_display_type} = #{screenshot_set.app_screenshots}")
           count += screenshot_set.app_screenshots.size
         end
       end
