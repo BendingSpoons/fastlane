@@ -178,7 +178,6 @@ module Deliver
                 checksums: [],
                 count_after_delete: app_screenshot_set.app_screenshots.size
             }
-            puts("(In the unless) Setting count after delete to #{app_screenshot_set.app_screenshots.size} for #{language}:#{device_type}")
             next
           end
 
@@ -195,7 +194,6 @@ module Deliver
               checksums: checksums,
               count_after_delete: app_screenshot_set.app_screenshots.size - checksums.size
           }
-          puts("(Normal) Setting count after delete to #{app_screenshot_set.app_screenshots.size} for #{language}:#{device_type}")
         end
 
         checksums_to_delete[language] = checksums_per_device_type
@@ -224,8 +222,7 @@ module Deliver
       Parallel.each(localizations, in_threads: n_threads) do |localization|
         language = localization.locale
 
-        # Only delete screenshots if trying to upload
-        next unless checksums_to_delete.keys.include?(language)
+        next unless checksums_to_delete.key?(language)
 
         # Find all the screenshots that need to be deleted (via their checksums) and delete them
         app_store_sets_for_language = app_store_screenshot_sets_map[language]
@@ -236,7 +233,7 @@ module Deliver
           checksums_for_locale = checksums_to_delete[language]
 
           # Skip if there are no checksums for the specified locale and device type
-          next unless checksums_for_locale.keys.include?(device_type)
+          next unless checksums_for_locale.key?(device_type)
           checksums_for_device_type = checksums_for_locale[device_type][:checksums]
           UI.message("Removing #{checksums_for_device_type.size} screenshots for '#{language}' '#{device_type}'...")
 
@@ -256,11 +253,9 @@ module Deliver
       # Sometimes API requests will fail but screenshots will still be deleted
       # Also, need to reload the sets to get the actual screenshots in App Store after the deletion
       reloaded_app_store_sets_map = load_app_store_screenshot_sets(localizations)
-      actual_count = count_screenshots(reloaded_app_store_sets_map)
+      actual_count = count_screenshots(reloaded_app_store_sets_map, checksums_to_delete)
       expected_count = get_expected_count_after_delete(checksums_to_delete)
       count = actual_count - expected_count
-      puts("Actual count: #{actual_count}")
-      puts("Expected count: #{expected_count}")
       UI.important("Number of screenshots not deleted: #{count}")
       if count > 0
         if tries.zero?
@@ -274,10 +269,13 @@ module Deliver
       end
     end
 
-    def count_screenshots(app_store_screenshot_sets_map)
+    def count_screenshots(app_store_screenshot_sets_map, checksums_to_delete)
       count = 0
 
-      app_store_screenshot_sets_map.values.each do |app_store_sets_for_language|
+      app_store_screenshot_sets_map.each do |language, app_store_sets_for_language|
+        # disregard count for language if nothing is deleted in it
+        next unless checksums_to_delete.key?(language)
+
         app_store_sets_for_language.values.each do |app_store_set_for_device_type|
           count += app_store_set_for_device_type.app_screenshots.size
         end
