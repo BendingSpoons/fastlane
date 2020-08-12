@@ -27,15 +27,12 @@ module Deliver
 
       localizations = version.get_app_store_version_localizations
 
-      puts(localizations)
-      puts(localizations.length)
-
       app_store_screenshot_sets_map = load_app_store_screenshot_sets(localizations)
 
       updated_sets_per_language = get_updated_screenshots(app_store_screenshot_sets_map, screenshots_per_language)
       checksums_to_delete = get_checksums_to_delete(app_store_screenshot_sets_map, updated_sets_per_language)
 
-      delete_screenshots(localizations, checksums_to_delete, max_n_threads)
+      delete_screenshots(localizations, app_store_screenshot_sets_map, checksums_to_delete, max_n_threads)
 
       # Finding languages to enable
       languages = screenshots_per_language.keys
@@ -73,6 +70,8 @@ module Deliver
 
         app_store_screenshot_sets_map[localization.locale] = app_store_sets_for_language
       end
+
+      app_store_screenshot_sets_map
     end
 
     def get_updated_screenshots(app_store_screenshot_sets_map, screenshots_per_language)
@@ -168,9 +167,9 @@ module Deliver
 
       updated_sets_per_language.each do |language, updated_screenshots_per_device_type|
         checksums_per_device_type = {}
-        app_screenshot_sets = app_store_screenshot_sets_map[language]
+        app_sets_for_language = app_store_screenshot_sets_map[language]
 
-        app_screenshot_sets.each do |app_screenshot_set|
+        app_sets_for_language.values.each do |app_screenshot_set|
           device_type = app_screenshot_set.screenshot_display_type
 
           unless updated_screenshots_per_device_type.key?(device_type)
@@ -179,6 +178,7 @@ module Deliver
                 checksums: [],
                 count_after_delete: app_screenshot_set.app_screenshots.size
             }
+            puts("(In the unless) Setting count after delete to #{app_screenshot_set.app_screenshots.size} for #{language}:#{device_type}")
             next
           end
 
@@ -195,6 +195,7 @@ module Deliver
               checksums: checksums,
               count_after_delete: app_screenshot_set.app_screenshots.size - checksums.size
           }
+          puts("(Normal) Setting count after delete to #{app_screenshot_set.app_screenshots.size} for #{language}:#{device_type}")
         end
 
         checksums_to_delete[language] = checksums_per_device_type
@@ -227,10 +228,10 @@ module Deliver
         next unless checksums_to_delete.keys.include?(language)
 
         # Find all the screenshots that need to be deleted (via their checksums) and delete them
-        app_store_screenshot_sets = app_store_screenshot_sets_map[language]
+        app_store_sets_for_language = app_store_screenshot_sets_map[language]
 
         # Multi threading delete on single localization
-        app_store_screenshot_sets.each do |app_store_screenshot_set|
+        app_store_sets_for_language.values.each do |app_store_screenshot_set|
           device_type = app_store_screenshot_set.screenshot_display_type
           checksums_for_locale = checksums_to_delete[language]
 
@@ -258,13 +259,15 @@ module Deliver
       actual_count = count_screenshots(reloaded_app_store_sets_map)
       expected_count = get_expected_count_after_delete(checksums_to_delete)
       count = actual_count - expected_count
+      puts("Actual count: #{actual_count}")
+      puts("Expected count: #{expected_count}")
       UI.important("Number of screenshots not deleted: #{count}")
       if count > 0
         if tries.zero?
           UI.user_error!("Failed verification of all screenshots deleted... #{count} screenshot(s) still exist")
         else
           UI.error("Failed to delete all screenshots... Tries remaining: #{tries}")
-          delete_screenshots(localizations, reloaded_app_store_sets_map, checksums_to_delete, tries: tries)
+          delete_screenshots(localizations, reloaded_app_store_sets_map, checksums_to_delete, max_n_threads, tries: tries)
         end
       else
         UI.message("Successfully deleted all screenshots")
@@ -274,8 +277,8 @@ module Deliver
     def count_screenshots(app_store_screenshot_sets_map)
       count = 0
 
-      app_store_screenshot_sets_map.values do |app_store_sets_for_language|
-        app_store_sets_for_language.values do |app_store_set_for_device_type|
+      app_store_screenshot_sets_map.values.each do |app_store_sets_for_language|
+        app_store_sets_for_language.values.each do |app_store_set_for_device_type|
           count += app_store_set_for_device_type.app_screenshots.size
         end
       end
