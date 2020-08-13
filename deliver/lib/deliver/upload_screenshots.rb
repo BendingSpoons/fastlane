@@ -23,19 +23,19 @@ module Deliver
       UI.important("Will begin uploading snapshots for '#{version.version_string}' on App Store Connect")
 
       UI.message("Starting with the upload of screenshots...")
-      screenshots_per_language = screenshots.group_by(&:language)
+      candidate_screenshots_per_language = screenshots.group_by(&:language)
 
       localizations = version.get_app_store_version_localizations
 
       app_store_screenshot_sets_map = load_app_store_screenshot_sets(localizations)
 
-      updated_sets_per_language = get_updated_screenshots(app_store_screenshot_sets_map, screenshots_per_language)
-      checksums_to_delete = get_checksums_to_delete(app_store_screenshot_sets_map, updated_sets_per_language)
+      changed_sets_per_language = get_changed_screenshots(app_store_screenshot_sets_map, candidate_screenshots_per_language)
+      checksums_to_delete = get_checksums_to_delete(app_store_screenshot_sets_map, changed_sets_per_language)
 
       delete_screenshots(localizations, app_store_screenshot_sets_map, checksums_to_delete, max_n_threads)
 
       # Finding languages to enable
-      languages = screenshots_per_language.keys
+      languages = candidate_screenshots_per_language.keys
       locales_to_enable = languages - localizations.map(&:locale)
 
       if locales_to_enable.count > 0
@@ -55,7 +55,7 @@ module Deliver
         localizations = version.get_app_store_version_localizations
       end
 
-      upload_screenshots(updated_sets_per_language, localizations, options, max_n_threads)
+      upload_screenshots(changed_sets_per_language, localizations, options, max_n_threads)
     end
 
     def load_app_store_screenshot_sets(localizations)
@@ -74,78 +74,79 @@ module Deliver
       app_store_screenshot_sets_map
     end
 
-    def get_updated_screenshots(app_store_screenshot_sets_map, screenshots_per_language)
-      sets_per_language = {} # per locale and device type; all provided screenshots
-      updated_sets_per_language = {} # per locale and device type; just the updated screenshots
+    def get_changed_screenshots(app_store_screenshot_sets_map, candidate_screenshots_per_language)
+      candidate_sets_per_language = {} # per locale and device type; all provided screenshots
+      changed_sets_per_language = {} # per locale and device type; screenshots that have been added, removed or updated
 
       # first, divide the new screenshots into sets
-      screenshots_per_language.each do |language, screenshots_for_language|
-        screenshots_per_device_type = {}
+      candidate_screenshots_per_language.each do |language, candidates_for_language|
+        candidates_per_device_type = {}
 
-        screenshots_for_language.each do |screenshot|
-          display_type = screenshot.device_type
+        candidates_for_language.each do |candidate_screenshot|
+          display_type = candidate_screenshot.device_type
 
           if display_type.nil?
-            UI.error("Error... Screenshot size #{screenshot.screen_size} not valid for App Store Connect")
+            UI.error("Error... Screenshot size #{candidate_screenshot.screen_size} not valid for App Store Connect")
             next
           end
 
-          bytes = File.binread(screenshot.path)
+          bytes = File.binread(candidate_screenshot.path)
           checksum = Digest::MD5.hexdigest(bytes)
 
-          screenshots_per_device_type[display_type] ||= []
-          screenshots_per_device_type[display_type] << {
-              screenshot: screenshot,
+          candidates_per_device_type[display_type] ||= []
+          candidates_per_device_type[display_type] << {
+              screenshot: candidate_screenshot,
               checksum: checksum
           }
         end
 
-        sets_per_language[language] = screenshots_per_device_type
+        candidate_sets_per_language[language] = candidates_per_device_type
       end
 
       # remove any duplicate by comparing checksums, keep the first occurrence only
-      sets_per_language.values.each do |screenshots_per_device_type|
-        screenshots_per_device_type.values.each do |screenshots_with_checksums|
-          screenshots_with_checksums.uniq! { |screenshot| screenshot[:checksum] }
+      candidate_sets_per_language.values.each do |candidate_sets_per_device_type|
+        candidate_sets_per_device_type.values.each do |candidates_with_checksums|
+          candidates_with_checksums.uniq! { |screenshot| screenshot[:checksum] }
         end
       end
 
       # then, compare the new screenshots with the existing ones
-      sets_per_language.each do |language, screenshots_per_device_type|
-        updated_screenshots_per_device_type = {}
+      candidate_sets_per_language.each do |language, candidate_sets_per_device_type|
+        changed_screenshots_per_device_type = {}
 
         unless app_store_screenshot_sets_map.key?(language)
           UI.error("Couldn't find localization on version for #{language}")
           next
         end
 
-        app_store_sets_for_language = app_store_screenshot_sets_map[language]
-        screenshots_per_device_type.each do |device_type, screenshots_with_checksums|
-          existing_screenshots = app_store_sets_for_language[device_type].app_screenshots
-          updated_screenshots_per_device_type[device_type] ||= []
+        app_store_sets_per_device_type = app_store_screenshot_sets_map[language]
+        candidate_sets_per_device_type.each do |device_type, candidates_with_checksums|
+          app_store_screenshots = app_store_sets_per_device_type[device_type].app_screenshots
+          changed_screenshots_per_device_type[device_type] ||= []
 
-          screenshots_with_checksums.each_with_index do |screenshot_with_checksum, index|
+          candidates_with_checksums.each_with_index do |candidate_with_checksum, index|
             if index >= 10
-              UI.error("Too many screenshots found for device '#{device_type}' in '#{language}', skipping this one (#{screenshot_with_checksum[:screenshot].path})")
+              UI.error("Too many screenshots found for device '#{device_type}' in '#{language}', skipping this one (#{candidate_with_checksum[:screenshot].path})")
               next
             end
 
-            existing_screenshot = existing_screenshots[index]
-            next unless existing_screenshot.nil? || existing_screenshot.source_file_checksum != screenshot_with_checksum[:checksum]
+            app_store_screenshot = app_store_screenshots[index]
+            next unless app_store_screenshot.nil? || app_store_screenshot.source_file_checksum != candidate_with_checksum[:checksum]
 
-            updated_screenshots_per_device_type[device_type] << {
-                screenshot: screenshot_with_checksum[:screenshot],
+            # the added and updated screenshots from the candidates
+            changed_screenshots_per_device_type[device_type] << {
+                screenshot: candidate_with_checksum[:screenshot],
                 position: index
             }
           end
 
-          # if there are more existing screenshots, it means some need to be deleted without replacing them
-          next unless existing_screenshots.size > screenshots_with_checksums.size
+          # if there are more (existing) app store screenshots, it means some need to be removed without being replaced
+          next unless app_store_screenshots.size > candidates_with_checksums.size
 
-          index = screenshots_with_checksums.size
-          while index < screenshots_with_checksums.size
+          index = candidates_with_checksums.size
+          while index < candidates_with_checksums.size
             # add a "nil" screenshot for every position that will no longer be filled (in order to delete them)
-            updated_screenshots_per_device_type[device_type] << {
+            changed_screenshots_per_device_type[device_type] << {
                 screenshot: nil,
                 position: index
             }
@@ -153,46 +154,46 @@ module Deliver
           end
         end
 
-        updated_sets_per_language[language] = updated_screenshots_per_device_type
+        changed_sets_per_language[language] = changed_screenshots_per_device_type
 
-        count = updated_screenshots_per_device_type.values.reduce(0) { |sum, screenshots_with_positions| sum + screenshots_with_positions.size }
-        UI.message("Found #{count} updated screenshots for language #{language}")
+        count = changed_screenshots_per_device_type.values.reduce(0) { |sum, screenshots_with_positions| sum + screenshots_with_positions.size }
+        UI.message("Found #{count} added, removed or updated screenshots for language #{language}")
       end
 
-      updated_sets_per_language
+      changed_sets_per_language
     end
 
-    def get_checksums_to_delete(app_store_screenshot_sets_map, updated_sets_per_language)
+    def get_checksums_to_delete(app_store_screenshot_sets_map, changed_sets_per_language)
       checksums_to_delete = {} # per language and device type
 
-      updated_sets_per_language.each do |language, updated_screenshots_per_device_type|
+      changed_sets_per_language.each do |language, changed_sets_per_device_type|
         checksums_per_device_type = {}
-        app_sets_for_language = app_store_screenshot_sets_map[language]
+        app_store_sets_per_device_type = app_store_screenshot_sets_map[language]
 
-        app_sets_for_language.values.each do |app_screenshot_set|
-          device_type = app_screenshot_set.screenshot_display_type
+        app_store_sets_per_device_type.values.each do |app_store_screenshot_set|
+          device_type = app_store_screenshot_set.screenshot_display_type
 
-          unless updated_screenshots_per_device_type.key?(device_type)
+          unless changed_sets_per_device_type.key?(device_type)
             # if there is no device type specified, add empty array of checksums to delete
             checksums_per_device_type[device_type] = {
                 checksums: [],
-                count_after_delete: app_screenshot_set.app_screenshots.size
+                count_after_delete: app_store_screenshot_set.app_screenshots.size
             }
             next
           end
 
-          updated_screenshots_set = updated_screenshots_per_device_type[device_type]
-          updated_screenshots_positions = updated_screenshots_set.map { |screenshot_with_position| screenshot_with_position[:position] }
+          changed_screenshot_set = changed_sets_per_device_type[device_type]
+          changed_screenshot_positions = changed_screenshot_set.map { |screenshot_with_position| screenshot_with_position[:position] }
           checksums = []
 
-          app_screenshot_set.app_screenshots.each_with_index do |screenshot, index|
-            next unless updated_screenshots_positions.include?(index)
+          app_store_screenshot_set.app_screenshots.each_with_index do |screenshot, index|
+            next unless changed_screenshot_positions.include?(index)
             checksums << screenshot.source_file_checksum
           end
 
           checksums_per_device_type[device_type] = {
               checksums: checksums,
-              count_after_delete: app_screenshot_set.app_screenshots.size - checksums.size
+              count_after_delete: app_store_screenshot_set.app_screenshots.size - checksums.size
           }
         end
 
@@ -225,16 +226,16 @@ module Deliver
         next unless checksums_to_delete.key?(language)
 
         # Find all the screenshots that need to be deleted (via their checksums) and delete them
-        app_store_sets_for_language = app_store_screenshot_sets_map[language]
+        app_store_sets_per_device_type = app_store_screenshot_sets_map[language]
 
         # Multi threading delete on single localization
-        app_store_sets_for_language.values.each do |app_store_screenshot_set|
+        app_store_sets_per_device_type.values.each do |app_store_screenshot_set|
           device_type = app_store_screenshot_set.screenshot_display_type
-          checksums_for_locale = checksums_to_delete[language]
+          checksums_per_device_type = checksums_to_delete[language]
 
           # Skip if there are no checksums for the specified locale and device type
-          next unless checksums_for_locale.key?(device_type)
-          checksums_for_device_type = checksums_for_locale[device_type][:checksums]
+          next unless checksums_per_device_type.key?(device_type)
+          checksums_for_device_type = checksums_per_device_type[device_type][:checksums]
           UI.message("Removing #{checksums_for_device_type.size} screenshots for '#{language}' '#{device_type}'...")
 
           app_store_screenshot_set.app_screenshots.each do |app_store_screenshot|
@@ -284,10 +285,10 @@ module Deliver
       count
     end
 
-    def upload_screenshots(updated_sets_per_language, localizations, options, max_n_threads)
+    def upload_screenshots(changed_sets_per_language, localizations, options, max_n_threads)
       # Check if should wait for processing
       # Default to waiting if submitting for review (since needed for submission)
-      # Otherwise use enviroment variable
+      # Otherwise use environment variable
       if ENV["DELIVER_SKIP_WAIT_FOR_SCREENSHOT_PROCESSING"].nil?
         wait_for_processing = options[:submit_for_review]
         UI.verbose("Setting wait_for_processing from ':submit_for_review' option")
@@ -307,8 +308,8 @@ module Deliver
       # need to reload the sets after the delete operations
       app_store_screenshot_sets_map = load_app_store_screenshot_sets(localizations)
 
-      n_threads = [max_n_threads, updated_sets_per_language.keys.length].min
-      Parallel.each(updated_sets_per_language, in_threads: n_threads) do |language, screenshots_per_device_type|
+      n_threads = [max_n_threads, changed_sets_per_language.keys.length].min
+      Parallel.each(changed_sets_per_language, in_threads: n_threads) do |language, changed_sets_per_device_type|
         # Find localization to upload screenshots to
         localization = localizations.find do |l|
           l.locale == language
@@ -321,27 +322,27 @@ module Deliver
 
         app_store_sets_for_language = app_store_screenshot_sets_map[language]
 
-        screenshots_per_device_type.each do |device_type, screenshots_with_positions|
-          UI.message("Uploading #{screenshots_with_positions.length} screenshots for '#{language}', '#{device_type}'")
-          screenshots_with_positions.each do |screenshot_with_position|
-            screenshot = screenshot_with_position[:screenshot]
+        changed_sets_per_device_type.each do |device_type, changed_screenshots_for_device_type|
+          UI.message("Uploading #{changed_screenshots_for_device_type.length} screenshots for '#{language}', '#{device_type}'")
+          changed_screenshots_for_device_type.each do |changed_screenshot_with_position|
+            changed_screenshot = changed_screenshot_with_position[:screenshot]
 
             # don't upload the empty screenshots that represent the no-longer filled positions
-            next if screenshot.nil?
+            next if changed_screenshot.nil?
 
-            position = screenshot_with_position[:position]
-            set = app_store_sets_for_language[device_type]
+            position = changed_screenshot_with_position[:position]
+            app_store_screenshot_set = app_store_sets_for_language[device_type]
 
-            unless set
-              set = localization.create_app_screenshot_set(attributes: {
+            unless app_store_screenshot_set
+              app_store_screenshot_set = localization.create_app_screenshot_set(attributes: {
                   screenshotDisplayType: device_type
               })
-              app_store_sets_for_language[device_type] = set
+              app_store_sets_for_language[device_type] = app_store_screenshot_set
             end
 
             Deliver.retry_api_call do
-              UI.message("Uploading '#{screenshot.path}'...")
-              set.upload_screenshot(path: screenshot.path, wait_for_processing: wait_for_processing, position: position)
+              UI.message("Uploading '#{changed_screenshot.path}'...")
+              app_store_screenshot_set.upload_screenshot(path: changed_screenshot.path, wait_for_processing: wait_for_processing, position: position)
             end
           end
         end
