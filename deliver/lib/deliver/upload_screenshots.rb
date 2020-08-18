@@ -144,7 +144,7 @@ module Deliver
           next unless app_store_screenshots.size > candidates_with_checksums.size
 
           index = candidates_with_checksums.size
-          while index < candidates_with_checksums.size
+          while index < app_store_screenshots.size
             # add a "nil" screenshot for every position that will no longer be filled (in order to delete them)
             changed_screenshots_per_device_type[device_type] << {
                 screenshot: nil,
