@@ -243,10 +243,10 @@ module Deliver
           app_store_screenshot_set.app_screenshots.each do |app_store_screenshot|
             next unless ids_to_delete.include?(app_store_screenshot.id)
 
-            UI.verbose("Deleting screenshot - #{language} #{app_store_screenshot_set.screenshot_display_type} #{app_store_screenshot.id}")
+            UI.message("Deleting screenshot - #{language} #{app_store_screenshot_set.screenshot_display_type} #{app_store_screenshot.id}")
             Deliver.retry_api_call do
               app_store_screenshot.delete!
-              UI.verbose("Deleted screenshot - #{language} #{app_store_screenshot_set.screenshot_display_type} #{app_store_screenshot.id}")
+              UI.message("Deleted screenshot - #{language} #{app_store_screenshot_set.screenshot_display_type} #{app_store_screenshot.id}")
             end
           end
         end
@@ -325,8 +325,10 @@ module Deliver
         app_store_sets_for_language = app_store_screenshot_sets_map[language]
 
         changed_sets_per_device_type.each do |device_type, changed_screenshots_for_device_type|
-          UI.message("Uploading #{changed_screenshots_for_device_type.length} screenshots for '#{language}', '#{device_type}'")
-          changed_screenshots_for_device_type.each do |changed_screenshot_with_position|
+          changed_screenshots_to_be_uploaded = changed_screenshots_for_device_type.reject { |screenshot_with_position| screenshot_with_position[:screenshot].nil? }
+          UI.message("Uploading #{changed_screenshots_to_be_uploaded.length} screenshots for '#{language}', '#{device_type}'")
+
+          changed_screenshots_to_be_uploaded.each do |changed_screenshot_with_position|
             changed_screenshot = changed_screenshot_with_position[:screenshot]
 
             # don't upload the empty screenshots that represent the no-longer filled positions
