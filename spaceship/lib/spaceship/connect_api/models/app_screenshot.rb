@@ -91,7 +91,7 @@ module Spaceship
 
         until success
           begin
-            private_create(client: client, app_screenshot_set_id: app_screenshot_set_id, path: path, wait_for_processing: wait_for_processing)
+            screenshot = private_create(client: client, app_screenshot_set_id: app_screenshot_set_id, path: path, wait_for_processing: wait_for_processing)
             success = true
           rescue Spaceship::ValidationJobFailedError => e
             remaining_tries -= 1
@@ -101,6 +101,8 @@ module Spaceship
             Spaceship.retry_api_call { e.screenshot.delete! }
           end
         end
+
+        screenshot
       end
 
       def delete!(client: nil, filter: {}, includes: nil, limit: nil, sort: nil)
