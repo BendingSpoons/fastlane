@@ -62,9 +62,9 @@ module Spaceship
         return Spaceship::ConnectAPI.get_app_preview_set(app_preview_set_id: app_preview_set_id, filter: nil, includes: includes, limit: nil, sort: nil).first
       end
 
-      def upload_preview(path: nil, wait_for_processing: true, position: nil, frame_time_code: nil)
+      def upload_preview(path: nil, position: nil)
         # Upload preview
-        preview = Spaceship::ConnectAPI::AppPreview.create(app_preview_set_id: id, path: path, wait_for_processing: wait_for_processing, frame_time_code: frame_time_code)
+        preview = Spaceship::ConnectAPI::AppPreview.create(app_preview_set_id: id, path: path)
 
         # Reposition (if specified)
         unless position.nil?
