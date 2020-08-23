@@ -68,10 +68,10 @@ module Spaceship
         return client.delete_app_preview_set(app_preview_set_id: id)
       end
 
-      def upload_preview(client: nil, path: nil, wait_for_processing: true, position: nil, frame_time_code: nil)
+      def upload_preview(client: nil, path: nil, position: nil)
         client ||= Spaceship::ConnectAPI
         # Upload preview
-        preview = Spaceship::ConnectAPI::AppPreview.create(client: client, app_preview_set_id: id, path: path, wait_for_processing: wait_for_processing, frame_time_code: frame_time_code)
+        preview = Spaceship::ConnectAPI::AppPreview.create(client: client, app_preview_set_id: id, path: path)
 
         # Reposition (if specified)
         unless position.nil?

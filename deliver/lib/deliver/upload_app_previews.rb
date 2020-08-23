@@ -324,10 +324,13 @@ module Deliver
         end
 
         app_store_sets_for_language = app_store_preview_sets_map[language]
+        uploaded_app_store_previews_per_preview_type = {}
 
         changed_sets_per_preview_type.each do |preview_type, changed_previews_for_preview_type|
           changed_previews_to_be_uploaded = changed_previews_for_preview_type.reject { |preview_with_position| preview_with_position[:preview].nil? }
           UI.message("Uploading #{changed_previews_to_be_uploaded.length} app previews for '#{language}', '#{preview_type}'")
+
+          uploaded_app_store_previews = []
 
           changed_previews_to_be_uploaded.each do |changed_preview_with_position|
             changed_preview = changed_preview_with_position[:preview]
@@ -347,7 +350,18 @@ module Deliver
 
             Deliver.retry_api_call do
               UI.message("Uploading '#{changed_preview.path}'...")
-              app_store_preview_set.upload_preview(path: changed_preview.path, wait_for_processing: wait_for_processing, position: position, frame_time_code: frame_time_code)
+              uploaded_app_store_previews << app_store_preview_set.upload_preview(path: changed_preview.path, position: position)
+            end
+          end
+
+          uploaded_app_store_previews_per_preview_type[preview_type] = uploaded_app_store_previews
+        end
+
+        uploaded_app_store_previews_per_preview_type.each do |preview_type, uploaded_app_store_previews|
+          uploaded_app_store_previews.each do |uploaded_app_store_preview|
+            Deliver.retry_api_call do
+              UI.message("Waiting for #{uploaded_app_store_preview.id} for '#{language}', '#{preview_type}' to finish processing")
+              Spaceship::ConnectAPI::AppPreview.wait_for_processing(app_preview_id: uploaded_app_store_preview.id, frame_time_code: frame_time_code)
             end
           end
         end
