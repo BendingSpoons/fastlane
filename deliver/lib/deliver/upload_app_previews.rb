@@ -350,7 +350,8 @@ module Deliver
 
             Deliver.retry_api_call do
               UI.message("Uploading '#{changed_preview.path}'...")
-              uploaded_app_store_previews << app_store_preview_set.upload_preview(path: changed_preview.path, position: position)
+              # wait_for_processing is set to false and frame_time_code to nil since the waiting will be done later
+              uploaded_app_store_previews << app_store_preview_set.upload_preview(path: changed_preview.path, wait_for_processing: false, position: position)
             end
           end
 
@@ -361,7 +362,7 @@ module Deliver
           uploaded_app_store_previews.each do |uploaded_app_store_preview|
             Deliver.retry_api_call do
               UI.message("Waiting for #{uploaded_app_store_preview.id} for '#{language}', '#{preview_type}' to finish processing")
-              Spaceship::ConnectAPI::AppPreview.wait_for_processing(app_preview_id: uploaded_app_store_preview.id, frame_time_code: frame_time_code)
+              Spaceship::ConnectAPI::AppPreview.do_wait_for_processing(app_preview_id: uploaded_app_store_preview.id, frame_time_code: frame_time_code)
             end
           end
         end

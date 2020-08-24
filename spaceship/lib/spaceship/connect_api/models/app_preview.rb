@@ -65,7 +65,7 @@ module Spaceship
       # @param app_preview_set_id The AppPreviewSet id
       # @param path The path of the file
       # @param frame_time_code The time code for the preview still frame (ex: "00:00:07:01")
-      def self.create(client: nil, app_preview_set_id: nil, path: nil)
+      def self.create(client: nil, app_preview_set_id: nil, path: nil, wait_for_processing: true, frame_time_code: nil)
         require 'faraday'
 
         client ||= Spaceship::ConnectAPI
@@ -140,10 +140,16 @@ module Spaceship
           raise error unless preview.complete?
         end
 
+        # Poll for video processing completion to set still frame time
+        wait_for_processing = true unless frame_time_code.nil?
+        if wait_for_processing
+          do_wait_for_processing(app_preview_id: preview.id, frame_time_code: frame_time_code)
+        end
+
         preview
       end
 
-      def self.wait_for_processing(app_preview_id: nil, frame_time_code: nil)
+      def self.do_wait_for_processing(app_preview_id: nil, frame_time_code: nil)
         loop do
           preview = Spaceship::ConnectAPI::AppPreview.get(client: client, app_preview_id: app_preview_id)
           unless preview.video_url.nil?
