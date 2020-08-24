@@ -361,6 +361,9 @@ module Deliver
         uploaded_app_store_previews_per_preview_type.each do |preview_type, uploaded_app_store_previews|
           uploaded_app_store_previews.each do |uploaded_app_store_preview|
             Deliver.retry_api_call do
+              # add a random waiting time between calls in order not to overwhelm the Apple API
+              sleep(Random.rand(0..3))
+
               UI.message("Waiting for #{uploaded_app_store_preview.id} for '#{language}', '#{preview_type}' to finish processing")
               Spaceship::ConnectAPI::AppPreview.do_wait_for_processing(app_preview_id: uploaded_app_store_preview.id, frame_time_code: frame_time_code)
             end
