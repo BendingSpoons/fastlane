@@ -235,7 +235,7 @@ module Deliver
           # Skip if there are no specified previews to delete for the given locale and preview type
           next unless previews_to_delete_per_preview_type.key?(preview_type)
           previews_to_delete_for_preview_type = previews_to_delete_per_preview_type[preview_type][:previews]
-          UI.message("Removing #{previews_to_delete_for_preview_type.size} screenshots for '#{language}' '#{preview_type}'...")
+          UI.message("Removing #{previews_to_delete_for_preview_type.size} previews for '#{language}' '#{preview_type}'...")
 
           ids_to_delete = previews_to_delete_for_preview_type.map(&:id)
 
@@ -264,7 +264,7 @@ module Deliver
           UI.user_error!("Failed verification of all app previews deleted... #{count} app preview(s) still exist")
         else
           UI.error("Failed to delete all app previews... Tries remaining: #{tries}")
-          delete_screenshots(localizations, reloaded_app_store_sets_map, app_store_previews_to_delete, max_n_threads, tries: tries)
+          delete_app_previews(localizations, reloaded_app_store_sets_map, app_store_previews_to_delete, max_n_threads, tries: tries)
         end
       else
         UI.message("Successfully deleted all previews")
@@ -335,7 +335,7 @@ module Deliver
           changed_previews_to_be_uploaded.each do |changed_preview_with_position|
             changed_preview = changed_preview_with_position[:preview]
 
-            # don't upload the empty screenshots that represent the no-longer filled positions
+            # don't upload the empty previews that represent the no-longer filled positions
             next if changed_preview.nil?
 
             position = changed_preview_with_position[:position]
