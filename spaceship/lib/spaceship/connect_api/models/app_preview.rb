@@ -140,26 +140,30 @@ module Spaceship
         # Poll for video processing completion to set still frame time
         wait_for_processing = true unless frame_time_code.nil?
         if wait_for_processing
-          loop do
-            unless preview.video_url.nil?
-              puts("Preview processing complete!") if Spaceship::Globals.verbose?
-              break if frame_time_code.nil?
-              preview = preview.update(attributes: {
-                previewFrameTimeCode: frame_time_code
-              })
-              puts("Updated preview frame time code!") if Spaceship::Globals.verbose?
-              break
-            end
-
-            sleep_time = 30
-            puts("Waiting #{sleep_time} seconds before checking status of processing...") if Spaceship::Globals.verbose?
-            sleep(sleep_time)
-
-            preview = Spaceship::ConnectAPI::AppPreview.get(app_preview_id: preview.id)
-          end
+          do_wait_for_processing(app_preview_id: preview.id, frame_time_code: frame_time_code)
         end
 
         preview
+      end
+
+      def self.do_wait_for_processing(app_preview_id: nil, frame_time_code: nil)
+        loop do
+          preview = Spaceship::ConnectAPI::AppPreview.get(app_preview_id: app_preview_id)
+
+          unless preview.video_url.nil?
+            puts("Preview processing complete!") if Spaceship::Globals.verbose?
+            break if frame_time_code.nil?
+            preview.update(attributes: {
+                previewFrameTimeCode: frame_time_code
+            })
+            puts("Updated preview frame time code!") if Spaceship::Globals.verbose?
+            break
+          end
+
+          sleep_time = 30
+          puts("Waiting #{sleep_time} seconds before checking status of processing...") if Spaceship::Globals.verbose?
+          sleep(sleep_time)
+        end
       end
 
       def update(attributes: nil)
