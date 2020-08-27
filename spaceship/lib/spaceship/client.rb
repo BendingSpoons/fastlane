@@ -232,6 +232,11 @@ module Spaceship
         if ENV["DEBUG"]
           puts("To run spaceship through a local proxy, use SPACESHIP_DEBUG")
         end
+
+        # BSP: if the client is initialized using the cookie of a different client, no login
+        # will be performed, which prevents UnauthorizedAccessErrors from being processed
+        # within the with_retry() method. To avoid this, set @loggedin = true.
+        @loggedin = true unless cookie.nil?
       end
     end
 
@@ -435,6 +440,12 @@ module Spaceship
           # In this case we don't actually care about the exact exception, and why it was failing
           # because either way, we'll have to do a fresh login, where we do the actual error handling
           puts("Available session is not valid any more. Continuing with normal login.")
+
+          # BSP: this should not be necessary, because the login() operation below should always provide the subsequent
+          # call to fetch_olympus_session() with a valid cookie. However, we noticed some unhandled 401 being raised by
+          # that call occasionaly that we haven't been able to fully debug. Cleaning the cookie before making the call
+          # seems to help, so here we do just that.
+          @cookie.cleanup(session: true)
         end
       end
       #
@@ -587,7 +598,7 @@ module Spaceship
     def load_session_from_file
       begin
         if File.exist?(persistent_cookie_path)
-          puts("Loading session from '#{persistent_cookie_path}'") if Spaceship::Globals.verbose?
+          puts("Loading session from '#{persistent_cookie_path}'")
           @cookie.load(persistent_cookie_path)
           return true
         end
