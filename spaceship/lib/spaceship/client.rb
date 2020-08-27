@@ -893,6 +893,10 @@ module Spaceship
           msg = "Auth lost"
           logger.warn(msg)
           logger.warn(caller)
+          # Force cookie invalidation
+          @cookie = nil
+          FileUtils.rm_rf(persistent_cookie_path)
+          logger.warn("Invalidated cookie at path: #{persistent_cookie_path}")
           raise UnauthorizedAccessError.new, "Unauthorized Access"
         end
 
