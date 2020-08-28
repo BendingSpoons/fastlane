@@ -154,7 +154,7 @@ module Spaceship
         return response
       rescue => error
         tries -= 1
-        puts(error) if Spaceship::Globals.verbose?
+        logger.warn(error) if Spaceship::Globals.verbose?
         if tries.zero?
           return response
         else
