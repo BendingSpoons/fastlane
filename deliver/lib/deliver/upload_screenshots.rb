@@ -29,7 +29,7 @@ module Deliver
 
       app_store_screenshot_sets_map = load_app_store_screenshot_sets(localizations)
 
-      changed_sets_per_language = get_changed_screenshots(app_store_screenshot_sets_map, candidate_screenshots_per_language)
+      changed_sets_per_language = get_changed_screenshots(localizations, app_store_screenshot_sets_map, candidate_screenshots_per_language)
       app_store_screenshots_to_delete = get_app_store_screenshots_to_delete(app_store_screenshot_sets_map, changed_sets_per_language)
 
       delete_screenshots(localizations, app_store_screenshot_sets_map, app_store_screenshots_to_delete, max_n_threads)
@@ -74,7 +74,7 @@ module Deliver
       app_store_screenshot_sets_map
     end
 
-    def get_changed_screenshots(app_store_screenshot_sets_map, candidate_screenshots_per_language)
+    def get_changed_screenshots(localizations, app_store_screenshot_sets_map, candidate_screenshots_per_language)
       candidate_sets_per_language = {} # per locale and device type; all provided screenshots
       changed_sets_per_language = {} # per locale and device type; screenshots that have been added, removed or updated
 
@@ -112,6 +112,16 @@ module Deliver
 
       # then, compare the new screenshots with the existing ones
       candidate_sets_per_language.each do |language, candidate_sets_per_device_type|
+        # Find localization to upload screenshots to
+        localization = localizations.find do |l|
+          l.locale == language
+        end
+
+        unless localization
+          UI.error("Couldn't find localization on version for #{language}")
+          next
+        end
+
         changed_screenshots_per_device_type = {}
 
         unless app_store_screenshot_sets_map.key?(language)
@@ -121,7 +131,19 @@ module Deliver
 
         app_store_sets_per_device_type = app_store_screenshot_sets_map[language]
         candidate_sets_per_device_type.each do |device_type, candidates_with_checksums|
+          app_store_screenshot_set = app_store_sets_per_device_type[device_type]
+
+          unless app_store_screenshot_set
+            app_store_screenshot_set = localization.create_app_screenshot_set(attributes: {
+                screenshotDisplayType: device_type
+            })
+            app_store_sets_per_device_type[device_type] = app_store_screenshot_set
+          end
+
           app_store_screenshots = app_store_sets_per_device_type[device_type].app_screenshots
+          # in case the set has just been created on App Store, it's app_screenshots can be nil
+          app_store_screenshots ||= []
+
           changed_screenshots_per_device_type[device_type] ||= []
 
           candidates_with_checksums.each_with_index do |candidate_with_checksum, index|
@@ -312,16 +334,6 @@ module Deliver
 
       n_threads = [max_n_threads, changed_sets_per_language.keys.length].min
       Parallel.each(changed_sets_per_language, in_threads: n_threads) do |language, changed_sets_per_device_type|
-        # Find localization to upload screenshots to
-        localization = localizations.find do |l|
-          l.locale == language
-        end
-
-        unless localization
-          UI.error("Couldn't find localization on version for #{language}")
-          next
-        end
-
         app_store_sets_for_language = app_store_screenshot_sets_map[language]
 
         changed_sets_per_device_type.each do |device_type, changed_screenshots_for_device_type|
@@ -336,13 +348,6 @@ module Deliver
 
             position = changed_screenshot_with_position[:position]
             app_store_screenshot_set = app_store_sets_for_language[device_type]
-
-            unless app_store_screenshot_set
-              app_store_screenshot_set = localization.create_app_screenshot_set(attributes: {
-                  screenshotDisplayType: device_type
-              })
-              app_store_sets_for_language[device_type] = app_store_screenshot_set
-            end
 
             Deliver.retry_api_call do
               UI.message("Uploading '#{changed_screenshot.path}'...")
