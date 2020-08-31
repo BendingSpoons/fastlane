@@ -224,6 +224,11 @@ module Spaceship
         if ENV["DEBUG"]
           puts("To run spaceship through a local proxy, use SPACESHIP_DEBUG")
         end
+
+        # BSP: if the client is initialized using the cookie of a different client, no login
+        # will be performed, which prevents UnauthorizedAccessErrors from being processed
+        # within the with_retry() method. To avoid this, set @loggedin = true.
+        @loggedin = true unless cookie.nil?
       end
     end
 
