@@ -865,8 +865,7 @@ module Spaceship
           msg = "Auth lost"
           logger.warn(msg)
           logger.warn(caller)
-          # Force cookie invalidation
-          @cookie = HTTP::CookieJar.new
+          # BSP: force cookie invalidation. *DO NOT* re-initialize @cookie, or Faraday gets out of sync!
           FileUtils.rm_rf(persistent_cookie_path)
           logger.warn("Invalidated cookie at path: #{persistent_cookie_path}")
           raise UnauthorizedAccessError.new, "Unauthorized Access"
