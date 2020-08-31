@@ -572,7 +572,7 @@ module Spaceship
     def load_session_from_file
       begin
         if File.exist?(persistent_cookie_path)
-          puts("Loading session from '#{persistent_cookie_path}'") if Spaceship::Globals.verbose?
+          puts("Loading session from '#{persistent_cookie_path}'")
           @cookie.load(persistent_cookie_path)
           return true
         end
