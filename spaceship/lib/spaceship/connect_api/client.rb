@@ -72,11 +72,12 @@ module Spaceship
         return @token.nil?
       end
 
-      def build_params(filter: nil, includes: nil, limit: nil, sort: nil, cursor: nil)
+      def build_params(fields: nil, filter: nil, includes: nil, limit: nil, sort: nil, cursor: nil)
         params = {}
 
         filter = filter.delete_if { |k, v| v.nil? } if filter
 
+        params[:fields] = fields if fields && !fields.empty?
         params[:filter] = filter if filter && !filter.empty?
         params[:include] = includes if includes
         params[:limit] = limit if limit
