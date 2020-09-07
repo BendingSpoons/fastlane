@@ -446,6 +446,15 @@ module Spaceship
       end
 
       #
+      # In App Purchases
+      #
+
+      def get_in_app_purchases(fields: {}, filter: {}, includes: nil, limit: nil, sort: nil)
+        resps = Spaceship::ConnectAPI.get_in_app_purchases(app_id: id, fields: fields, filter: filter, includes: includes, limit: limit, sort: sort).all_pages
+        return resps.flat_map(&:to_models)
+      end
+
+      #
       # Users
       #
 
