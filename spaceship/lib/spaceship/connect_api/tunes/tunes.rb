@@ -907,6 +907,41 @@ module Spaceship
       end
 
       #
+      # inAppPurchaseReviewSubmissions
+      #
+
+      def get_in_app_purchase_review_submission(in_app_purchase_review_submission_id: nil)
+        params = Client.instance.build_params(filter: nil, includes: nil, limit: nil, sort: nil)
+        Client.instance.get("inAppPurchaseReviewSubmissions/#{in_app_purchase_review_submission_id}", params)
+      end
+
+      def post_in_app_purchase_review_submission(in_app_purchase_id: nil)
+        body = {
+            data: {
+                type: "inAppPurchaseReviewSubmissions",
+                attributes: {
+                    submissionType: "WITH_NEXT_VERSION"
+                },
+                relationships: {
+                    inAppPurchase: {
+                        data: {
+                            type: "inAppPurchases",
+                            id: in_app_purchase_id
+                        }
+                    }
+                }
+            }
+        }
+
+        Client.instance.post("inAppPurchaseReviewSubmissions", body)
+      end
+
+      def delete_in_app_purchase_review_submission(in_app_purchase_review_submission_id: nil)
+        params = Client.instance.build_params(filter: nil, includes: nil, limit: nil, sort: nil)
+        Client.instance.delete("inAppPurchaseReviewSubmissions/#{in_app_purchase_review_submission_id}", params)
+      end
+
+      #
       # endUserLicenseAgreements
       #
 
