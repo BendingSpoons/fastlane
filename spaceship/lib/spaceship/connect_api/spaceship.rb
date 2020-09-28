@@ -1,6 +1,7 @@
 require_relative './client'
 
 require_relative './testflight/testflight'
+require_relative './private/testflight/testflight'
 
 module Spaceship
   class ConnectAPI
@@ -13,6 +14,7 @@ module Spaceship
       extend(Forwardable)
       def_delegators(:client, *Spaceship::ConnectAPI::Provisioning::API.instance_methods(false))
       def_delegators(:client, *Spaceship::ConnectAPI::TestFlight::API.instance_methods(false))
+      def_delegators(:client, *Spaceship::ConnectAPI::TestFlightPrivate::API.instance_methods(false))
       def_delegators(:client, *Spaceship::ConnectAPI::Tunes::API.instance_methods(false))
       def_delegators(:client, *Spaceship::ConnectAPI::Users::API.instance_methods(false))
 
