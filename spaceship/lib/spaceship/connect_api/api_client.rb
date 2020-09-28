@@ -7,10 +7,21 @@ require_relative './token_refresh_middleware'
 
 require_relative '../stats_middleware'
 
+require 'logger'
+
 module Spaceship
   class ConnectAPI
     class APIClient < Spaceship::Client
       attr_accessor :token
+
+      # Temporary global counters to debug 401 errors
+      @@call_counters = {
+          global: 0,
+          get: 0,
+          post: 0,
+          patch: 0,
+          delete: 0
+      }
 
       #####################################################
       # @!group Client Init
@@ -102,6 +113,7 @@ module Spaceship
       end
 
       def get(url_or_path, params = nil)
+        handle_api_call_logging(url_or_path, :get)
         response = with_asc_retry do
           request(:get) do |req|
             req.url(url_or_path)
@@ -114,6 +126,7 @@ module Spaceship
       end
 
       def post(url_or_path, body, tries: 5)
+        handle_api_call_logging(url_or_path, :post)
         response = with_asc_retry(tries) do
           request(:post) do |req|
             req.url(url_or_path)
@@ -125,6 +138,7 @@ module Spaceship
       end
 
       def patch(url_or_path, body)
+        handle_api_call_logging(url_or_path, :patch)
         response = with_asc_retry do
           request(:patch) do |req|
             req.url(url_or_path)
@@ -136,6 +150,7 @@ module Spaceship
       end
 
       def delete(url_or_path, params = nil, body = nil)
+        handle_api_call_logging(url_or_path, :delete)
         response = with_asc_retry do
           request(:delete) do |req|
             req.url(url_or_path)
@@ -158,7 +173,7 @@ module Spaceship
 
       def with_asc_retry(tries = 5, &_block)
         tries = 1 if Object.const_defined?("SpecHelper")
-
+        logger.warn("Executing asc retry, current tries (decreasing) #{tries}")
         response = yield
 
         status = response.status if response
@@ -175,7 +190,7 @@ module Spaceship
         raise error
       rescue TimeoutRetryError => error
         tries -= 1
-        puts(error) if Spaceship::Globals.verbose?
+        logger.warn(error) if Spaceship::Globals.verbose?
         if tries.zero?
           return response
         else
@@ -305,6 +320,19 @@ module Spaceship
       def provider_id
         return team_id if self.provider.nil?
         self.provider.provider_id
+      end
+
+      def handle_api_call_logging(url_or_path, method)
+        @@call_counters[method] += 1
+        @@call_counters[:global] += 1
+
+        components = [
+            "[BSP DEBUG] ConnectAPI:",
+            "global call #{@@call_counters[:global]},",
+            "#{method.to_s.upcase} count #{@@call_counters[method]}",
+            "on url or path #{url_or_path}"
+        ]
+        logger.warn(components.join(" "))
       end
     end
   end
