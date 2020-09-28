@@ -1,4 +1,5 @@
 require_relative './token'
+require_relative './private/testflight/testflight'
 require_relative './provisioning/provisioning'
 require_relative './testflight/testflight'
 require_relative './tunes/tunes'
@@ -83,6 +84,7 @@ module Spaceship
         # of an ConnectAPI::APIClient
         # These get set in set_indvidual_clients
         self.extend(Spaceship::ConnectAPI::TestFlight::API)
+        self.extend(Spaceship::ConnectAPI::TestFlightPrivate::API)
         self.extend(Spaceship::ConnectAPI::Tunes::API)
         self.extend(Spaceship::ConnectAPI::Provisioning::API)
         self.extend(Spaceship::ConnectAPI::Users::API)
@@ -162,6 +164,17 @@ module Spaceship
             current_team_id: current_team_id,
             token: token,
             another_client: tunes_client
+          )
+        end
+
+        # This was added by Spaceship::ConnectAPI::TestFlightPrivate::API and is required
+        # to be set for API methods to have a client to send request on
+        if cookie || token || tunes_client
+          self.test_flight_private_request_client = Spaceship::ConnectAPI::TestFlightPrivate::Client.new(
+              cookie: cookie,
+              current_team_id: current_team_id,
+              token: token,
+              another_client: tunes_client
           )
         end
 
