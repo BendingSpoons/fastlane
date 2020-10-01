@@ -329,10 +329,10 @@ module Spaceship
         @@call_counters[:global] += 1
 
         components = [
-            "[BSP DEBUG] ConnectAPI:",
-            "global call #{@@call_counters[:global]},",
-            "#{method.to_s.upcase} count #{@@call_counters[method]}",
-            "on url or path #{url_or_path}"
+          "[BSP DEBUG] ConnectAPI:",
+          "global call #{@@call_counters[:global]},",
+          "#{method.to_s.upcase} count #{@@call_counters[method]}",
+          "on url or path #{url_or_path}"
         ]
         logger.warn(components.join(" "))
       end
