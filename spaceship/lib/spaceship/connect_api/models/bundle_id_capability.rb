@@ -36,6 +36,7 @@ module Spaceship
         CLASSKIT = "CLASSKIT"
         AUTOFILL_CREDENTIAL_PROVIDER = "AUTOFILL_CREDENTIAL_PROVIDER"
         ACCESS_WIFI_INFORMATION = "ACCESS_WIFI_INFORMATION"
+        APPLE_ID_AUTH = "APPLE_ID_AUTH"
 
         # Undocumented as of 2020-06-09
         MARZIPAN = "MARZIPAN" # Catalyst
@@ -74,21 +75,20 @@ module Spaceship
       # API
       #
 
-      def self.all(client: nil, bundle_id_id:, limit: nil)
-        client ||= Spaceship::ConnectAPI
-        resp = client.get_bundle_id_capabilities(bundle_id_id: bundle_id_id, limit: limit).all_pages
-        return resp.flat_map(&:to_models)
+      def self.get(app_bundle, capability_type)
+        # Comparison must be done using the same type, enforce everything to string for safety
+        app_bundle.bundle_id_capabilities.find { |capability| capability.capabilityType.to_s == capability_type.to_s }
       end
 
-      def self.create(client: nil, bundle_id_id:, capability_type:, settings: [])
+      def self.create(client: nil, bundle_id_id: nil, attributes: nil, extra_relationships: nil)
         client ||= Spaceship::ConnectAPI
-        resp = client.post_bundle_id_capability(bundle_id_id: bundle_id_id, capability_type: capability_type, settings: settings)
+        resp = client.enable_bundle_id_capability(bundle_id_id: bundle_id_id, attributes: attributes, extra_relationships: extra_relationships)
         return resp.to_models.first
       end
 
-      def delete!(client: nil, filter: {}, includes: nil, limit: nil, sort: nil)
+      def delete!(client: nil)
         client ||= Spaceship::ConnectAPI
-        client.delete_bundle_id_capability(bundle_id_capability_id: id)
+        client.disable_bundle_id_capability(bundle_id_capability: id)
       end
     end
   end
