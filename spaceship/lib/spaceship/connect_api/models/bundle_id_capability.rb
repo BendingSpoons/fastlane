@@ -36,6 +36,7 @@ module Spaceship
         CLASSKIT = "CLASSKIT"
         AUTOFILL_CREDENTIAL_PROVIDER = "AUTOFILL_CREDENTIAL_PROVIDER"
         ACCESS_WIFI_INFORMATION = "ACCESS_WIFI_INFORMATION"
+        APPLE_ID_AUTH = "APPLE_ID_AUTH"
 
         # Undocumented as of 2020-06-09
         MARZIPAN = "MARZIPAN" # Catalyst
@@ -59,12 +60,18 @@ module Spaceship
       # API
       #
 
-      def self.all(filter: {}, includes: nil, limit: nil, sort: nil)
-        return users_client.get_users(filter: filter, includes: includes)
+      def self.get(app_bundle, capability_type)
+        # Comparison must be done using the same type, enforce everything to string for safety
+        app_bundle.bundle_id_capabilities.find { |capability| capability.capabilityType.to_s == capability_type.to_s }
       end
 
-      def self.find(email: nil, includes: nil)
-        return all(filter: { email: email }, includes: includes)
+      def self.create(bundle_id_id: nil, attributes: nil, extra_relationships: nil)
+        resp = Spaceship::ConnectAPI.enable_bundle_id_capability(bundle_id_id: bundle_id_id, attributes: attributes, extra_relationships: extra_relationships)
+        return resp.to_models.first
+      end
+
+      def delete!
+        Spaceship::ConnectAPI.disable_bundle_id_capability(bundle_id_capability: id)
       end
     end
   end

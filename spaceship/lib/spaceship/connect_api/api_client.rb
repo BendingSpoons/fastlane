@@ -189,6 +189,8 @@ module Spaceship
       end
 
       def handle_response(response)
+        raise UnexpectedResponse, "Unhandled exception during API call" if response.nil?
+
         if (200...300).cover?(response.status) && (response.body.nil? || response.body.empty?)
           return
         end
@@ -286,10 +288,10 @@ module Spaceship
         @@call_counters[:global] += 1
 
         components = [
-            "[BSP DEBUG] ConnectAPI:",
-            "global call #{@@call_counters[:global]},",
-            "#{method.to_s.upcase} count #{@@call_counters[method]}",
-            "on url or path #{url_or_path}"
+          "[BSP DEBUG] ConnectAPI:",
+          "global call #{@@call_counters[:global]},",
+          "#{method.to_s.upcase} count #{@@call_counters[method]}",
+          "on url or path #{url_or_path}"
         ]
         logger.warn(components.join(" "))
       end

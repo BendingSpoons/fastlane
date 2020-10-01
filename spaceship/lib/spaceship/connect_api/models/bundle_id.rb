@@ -1,5 +1,7 @@
 require_relative '../model'
 require_relative './bundle_id_capability'
+require_relative '../../connect_api'
+
 module Spaceship
   class ConnectAPI
     class BundleId
@@ -52,6 +54,16 @@ module Spaceship
 
       def self.get(bundle_id_id: nil, includes: nil)
         return Spaceship::ConnectAPI.get_bundle_id(bundle_id_id: bundle_id_id, includes: includes).first
+      end
+
+      def self.create(identifier, name, platform: Spaceship::ConnectAPI::Platform::IOS, seed_id: nil)
+        attributes = {
+            identifier: identifier,
+            name: name,
+            platform: platform
+        }
+        attributes[:seedId] = seed_id if seed_id
+        Spaceship::ConnectAPI.post_bundle_id(attributes: attributes)
       end
     end
   end
