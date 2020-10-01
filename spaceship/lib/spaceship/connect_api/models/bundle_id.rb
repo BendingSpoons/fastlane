@@ -80,6 +80,16 @@ module Spaceship
         resp = client.post_bundle_id_capability(bundle_id_id: id, capability_type: capability_type, settings: settings)
         return resp.to_models.first
       end
+
+      def self.create(identifier, name, platform: Spaceship::ConnectAPI::Platform::IOS, seed_id: nil)
+        attributes = {
+            identifier: identifier,
+            name: name,
+            platform: platform
+        }
+        attributes[:seedId] = seed_id if seed_id
+        Spaceship::ConnectAPI.post_bundle_id(attributes: attributes)
+      end
     end
   end
 end
