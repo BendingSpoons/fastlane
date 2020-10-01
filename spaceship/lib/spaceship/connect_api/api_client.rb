@@ -184,6 +184,8 @@ module Spaceship
       end
 
       def handle_response(response)
+        raise UnexpectedResponse, "Unhandled exception during API call" if response.nil?
+
         if (200...300).cover?(response.status) && (response.body.nil? || response.body.empty?)
           return
         end
