@@ -171,10 +171,10 @@ module Spaceship
         # to be set for API methods to have a client to send request on
         if cookie || token || tunes_client
           self.test_flight_private_request_client = Spaceship::ConnectAPI::TestFlightPrivate::Client.new(
-              cookie: cookie,
-              current_team_id: current_team_id,
-              token: token,
-              another_client: tunes_client
+            cookie: cookie,
+            current_team_id: current_team_id,
+            token: token,
+            another_client: tunes_client
           )
         end
 

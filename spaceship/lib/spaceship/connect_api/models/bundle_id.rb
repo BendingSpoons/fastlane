@@ -1,5 +1,7 @@
 require_relative '../model'
 require_relative './bundle_id_capability'
+require_relative '../../connect_api'
+
 module Spaceship
   class ConnectAPI
     class BundleId
