@@ -612,6 +612,18 @@ module Spaceship
     # @!group AppAnalytics
     #####################################################
 
+    def app_analytics_info(app_id: nil)
+      resource = app_id.nil? ? 'all' : app_id
+
+      r = request(:get) do |req|
+        req.url("https://appstoreconnect.apple.com/analytics/api/v1/app-info/#{resource}")
+        req.headers['Content-Type'] = 'application/json'
+        req.headers['X-Requested-By'] = 'appstoreconnect.apple.com'
+      end
+
+      parse_response(r)
+    end
+
     def time_series_analytics(app_ids, measures, start_time, end_time, frequency, view_by, filters = nil)
       data = {
         adamId: app_ids,
