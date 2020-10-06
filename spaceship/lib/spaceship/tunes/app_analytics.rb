@@ -12,6 +12,11 @@ module Spaceship
         end
       end
 
+      # App info (including opt-in rate)
+      def app_analytics_info
+        client.app_analytics_info(app_id: self.apple_id)
+      end
+
       # App Store / Impressions Unique Devices
       def app_impressions
         start_t, end_t = time_last_7_days
