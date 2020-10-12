@@ -56,6 +56,23 @@ module Spaceship
           provisioning_request_client.get("devices", params)
         end
 
+        def post_device(name: nil, platform: nil, udid: nil)
+          attributes = {
+            name: name,
+            platform: platform,
+            udid: udid
+          }
+
+          body = {
+            data: {
+              attributes: attributes,
+              type: "devices"
+            }
+          }
+
+          provisioning_request_client.post("devices", body)
+        end
+
         #
         # profiles
         #
