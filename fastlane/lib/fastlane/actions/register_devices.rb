@@ -60,6 +60,8 @@ module Fastlane
 
           device_platform = platform
 
+          device_platform = platform
+
           device_platform_supported = !device[2].nil? && self.is_supported?(device[2].to_sym)
           if device_platform_supported
             if device[2] == "mac"
