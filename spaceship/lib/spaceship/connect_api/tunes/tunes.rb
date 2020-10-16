@@ -192,7 +192,8 @@ module Spaceship
           body = {
             data: data
           }
-          body[:included] = included unless included.empty?
+          # TEMPORARY BSP FIX: this call seems to fail on public App Store Connect API
+          # body[:included] = included unless included.empty?
 
           tunes_request_client.patch("apps/#{app_id}", body)
         end
