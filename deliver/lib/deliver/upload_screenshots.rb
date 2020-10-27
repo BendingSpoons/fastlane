@@ -137,12 +137,12 @@ module Deliver
             app_store_screenshot_set = localization.create_app_screenshot_set(attributes: {
                 screenshotDisplayType: device_type
             })
+            # the app_screenshot field of a newly created set tends to be nil, when it should be []
+            app_store_screenshot_set.app_screenshots ||= []
             app_store_sets_per_device_type[device_type] = app_store_screenshot_set
           end
 
-          app_store_screenshots = app_store_sets_per_device_type[device_type].app_screenshots
-          # in case the set has just been created on App Store, it's app_screenshots can be nil
-          app_store_screenshots ||= []
+          app_store_screenshots = app_store_screenshot_set.app_screenshots
 
           changed_screenshots_per_device_type[device_type] ||= []
 
