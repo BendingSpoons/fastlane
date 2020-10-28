@@ -137,12 +137,12 @@ module Deliver
             app_store_preview_set = localization.create_app_preview_set(attributes: {
                 previewType: preview_type
             })
+            # the app_previews field of a newly created set tends to be nil, when it should be []
+            app_store_preview_set.app_previews ||= []
             app_store_sets_per_preview_type[preview_type] = app_store_preview_set
           end
 
-          app_store_previews = app_store_sets_per_preview_type[preview_type].app_previews
-          # in case the set has just been created on App Store, it's app_previews can be nil
-          app_store_previews ||= []
+          app_store_previews = app_store_preview_set.app_previews
 
           changed_previews_per_type[preview_type] ||= []
 
