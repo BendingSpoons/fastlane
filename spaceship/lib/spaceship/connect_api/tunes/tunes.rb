@@ -1128,8 +1128,8 @@ module Spaceship
         # inAppPurchases
         #
 
-        def get_in_app_purchases(app_id: nil, fields: {}, filter: {}, includes: nil, limit: nil, sort: nil)
-          params = tunes_request_client.build_params(fields: fields, filter: filter, includes: includes, limit: limit, sort: sort)
+        def get_in_app_purchases(app_id: nil, filter: {}, includes: nil, limit: nil, sort: nil)
+          params = tunes_request_client.build_params(filter: filter, includes: includes, limit: limit, sort: sort)
           tunes_request_client.get("apps/#{app_id}/inAppPurchases", params)
         end
 
