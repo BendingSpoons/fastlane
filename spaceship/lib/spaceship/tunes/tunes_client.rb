@@ -1501,14 +1501,23 @@ module Spaceship
     # @!group IAP products
     #####################################################
     def addons(app_id)
-      r = request(:get, "ra/apps/#{app_id}/addons")
+      r = request(:get, "ra/apps/#{app_id}/iaps")
       parse_response(r, 'data')
     end
 
     def delete_addon!(addon)
-      url = "ra/addons/delete/#{addon.addon_id}"
+      url = "ra/iaps/delete/#{addon.addon_id}"
       r = request(:post) do |req|
         req.url(url)
+      end
+      parse_response(r)
+    end
+
+    def submit_addon!(app_id, addon_id)
+      url = "ra/apps/#{app_id}/iaps/#{addon_id}/submission"
+      r = request(:post) do |req|
+        req.url(url)
+        req.headers['Content-Type'] = 'application/json'
       end
       parse_response(r)
     end
