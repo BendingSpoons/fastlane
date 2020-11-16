@@ -459,9 +459,11 @@ module Deliver
         lng_text += "s" if locales_to_enable.count != 1
         Helper.show_loading_indicator("Activating info #{lng_text} #{locales_to_enable.join(', ')}...")
 
+        # BSP: temporary fix since Apple broke their own public API and silently made the "name" field mandatory
         locales_to_enable.each do |locale|
           app_info.create_app_info_localization(attributes: {
-            locale: locale
+            locale: locale,
+            name: "Dummy"
           })
         end
 
