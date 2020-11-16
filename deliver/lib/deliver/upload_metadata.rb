@@ -1,5 +1,6 @@
 require 'fastlane_core'
 require 'spaceship'
+require 'securerandom'
 
 require_relative 'module'
 
@@ -470,9 +471,13 @@ module Deliver
         lng_text += "s" if locales_to_enable.count != 1
         Helper.show_loading_indicator("Activating info #{lng_text} #{locales_to_enable.join(', ')}...")
 
+        # BSP: temporary fix since Apple broke their own public API and silently made the "name" field mandatory
+        # The name must be random to decrease the likelihood of conflicts, and max 30 characters long
+        # Since we use hex to generate it and two hex chars = 1 byte, we ask for a 15 byte long string
         locales_to_enable.each do |locale|
           app_info.create_app_info_localization(attributes: {
-            locale: locale
+            locale: locale,
+            name: SecureRandom.hex(15)
           })
         end
 

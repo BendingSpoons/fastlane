@@ -693,9 +693,9 @@ module Spaceship
               type: "appInfoLocalizations",
               attributes: attributes,
               relationships: {
-                appStoreVersion: {
+                  appInfo: {
                   data: {
-                    type: "appStoreVersions",
+                    type: "appInfos",
                     id: app_info_id
                   }
                 }
