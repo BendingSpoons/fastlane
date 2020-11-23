@@ -44,6 +44,10 @@ module Spaceship
         resps = Spaceship::ConnectAPI.get_in_app_purchases(filter: filter, includes: includes).all_pages
         return resps.flat_map(&:to_models)
       end
+
+      def self.get(in_app_purchase_id: nil)
+        return Spaceship::ConnectAPI.get_in_app_purchase(in_app_purchase_id: in_app_purchase_id, filter: nil, includes: nil, limit: nil, sort: nil).first
+      end
     end
   end
 end
