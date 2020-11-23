@@ -133,6 +133,8 @@ module Spaceship
             status = proposed_versions[language][:status]
           elsif is_rejected
             status = rejected_versions[language][:status]
+          elsif is_active
+            status = active_versions[language][:status]
           end
 
           # Note that id=nil is valid only if the product doesn't exist; setting a nil value on an existing product
@@ -142,6 +144,8 @@ module Spaceship
             id = proposed_versions[language][:id]
           elsif is_rejected
             id = rejected_versions[language][:id]
+          elsif is_active
+            id = active_versions[language][:id]
           end
 
           new_versions << {
