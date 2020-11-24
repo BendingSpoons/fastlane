@@ -128,24 +128,32 @@ module Spaceship
           # (since the data may not be present in the "value" collection that is passed to this method)
           #
           # The base status of new IAPs MUST be "proposed", if it's nil App Store Connect will ignore the metadata
+          #
+          # However, please note that if an IAP localization has already been approved in the past and we change it,
+          # Apple will return BOTH the old localization (with status "active") AND the new localization (with status
+          # "proposed"). As counterintuitive as it sounds, the change MUST be applied with status ACTIVE, NOT PROPOSED!
+          # This requires "is_active" to be processed before "is_proposed". Failing to do so results in a crash with
+          # ITC.response.error.OPERATION_FAILED.
           status = "proposed"
-          if is_proposed
-            status = proposed_versions[language][:status]
+          if is_active
+            status = active_versions[language][:status]
           elsif is_rejected
             status = rejected_versions[language][:status]
-          elsif is_active
-            status = active_versions[language][:status]
+          elsif is_proposed
+            status = proposed_versions[language][:status]
           end
 
           # Note that id=nil is valid only if the product doesn't exist; setting a nil value on an existing product
-          # will result in a crash with ITC.response.error.OPERATION_FAILED
+          # will result in a crash with ITC.response.error.OPERATION_FAILED.
+          # The identifier must be taken from the returned version, taking care of selecting the highest priority one
+          # as outlined above (active > proposed).
           id = nil
-          if is_proposed
-            id = proposed_versions[language][:id]
+          if is_active
+            id = active_versions[language][:id]
           elsif is_rejected
             id = rejected_versions[language][:id]
-          elsif is_active
-            id = active_versions[language][:id]
+          elsif is_proposed
+            id = proposed_versions[language][:id]
           end
 
           new_versions << {
