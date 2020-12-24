@@ -645,7 +645,7 @@ module Spaceship
         AccessForbiddenError => ex
       tries -= 1
       # We cannot import Portal Client, so we verify that the call is towards the Portal API before handling the 403
-      if tries.positive? && (!ex.kind_of?(AccessForbiddenError) || ex.kind_of?(AccessForbiddenError) && self.hostname =~ /.*developer.apple.com.*/)
+      if tries.positive? && (!ex.kind_of?(AccessForbiddenError) || ex.kind_of?(AccessForbiddenError) && self.hostname && self.hostname =~ /.*developer.apple.com.*/)
         msg = "Timeout received: '#{ex.class}', '#{ex.message}'. Retrying after 3 seconds (remaining: #{tries})..."
         puts(msg) if Spaceship::Globals.verbose?
         logger.warn(msg)
