@@ -3,33 +3,27 @@ module Spaceship
     class UserInterface
       # Shows the UI to select a team
       # @example teams value:
-      #  [{"status"=>"active",
-      #   "teamId"=>"5A997XAAAA",
-      #   "type"=>"Company/Organization",
-      #   "extendedTeamAttributes"=>{},
-      #   "teamAgent"=>{
-      #       "personId"=>15534241111,
-      #       "firstName"=>"Felix",
-      #       "lastName"=>"Krause",
-      #       "email"=>"spaceship@krausefx.com",
-      #       "developerStatus"=>"active",
-      #       "teamMemberId"=>"5Y354CXAAA"},
-      #   "memberships"=>
-      #    [{"membershipId"=>"HJ5WHYC5CE",
-      #      "membershipProductId"=>"ds1",
-      #      "status"=>"active",
-      #      "inDeviceResetWindow"=>false,
-      #      "inRenewalWindow"=>false,
-      #      "dateStart"=>"11/20/14 07:59",
-      #      "dateExpire"=>"11/20/15 07:59",
-      #      "platform"=>"ios",
-      #      "availableDeviceSlots"=>100,
-      #      "name"=>"iOS Developer Program"}],
-      #   "currentTeamMember"=>
-      #    {"personId"=>nil, "firstName"=>nil, "lastName"=>nil, "email"=>nil, "developerStatus"=>nil, "privileges"=>{}, "roles"=>["TEAM_ADMIN"], "teamMemberId"=>"HQR8N4GAAA"},
-      #   "name"=>"Company GmbH"},
-      #     {...}
-      #   ]
+      #  [{"teamId"=>"XXXXXXXXXX",
+      #   "name"=>"SpaceShip",
+      #   "status"=>"active",
+      #   "entityType"=>"c",
+      #   "agent"=>{
+      #     "personId"=>499707568,
+      #     "firstName"=>"Felix",
+      #     "lastName"=>"Krause",
+      #     "email"=>"test@spaceship.com",
+      #     "developerStatus"=>"active",
+      #     "teamMemberId"=>"YYYYYYYYYY"},
+      #   "program"=>{
+      #     "type"=>"ad19",
+      #     "name"=>"iOS Developer Program",
+      #     "autoRenew"=>false,
+      #     "dateExpires"=>1640246340000,
+      #     "status"=>"active"},
+      #     "userRoles"=>["Admin"],
+      #   "teamMemberId"=>"YYYYYYYYYY"},
+      #   {...}
+      # ]
 
       # rubocop:disable Require/MissingRequireStatement
       def self.ci?
@@ -46,6 +40,14 @@ module Spaceship
         return true
       end
       # rubocop:enable Require/MissingRequireStatement
+
+      ENTITY_TYPE_MAP = {
+        "i" => "Individual",
+        "c" => "Company",
+        "h" => "Enterprise",
+        "e" => "University",
+        "t" => "IosForIt"
+      }
 
       def select_team(team_id: nil, team_name: nil)
         teams = client.teams
@@ -65,7 +67,7 @@ module Spaceship
           teams.each_with_index do |team, i|
             # There are 2 different values - one from the login page one from the Dev Team Page
             return team['teamId'] if team['teamId'].strip == team_id
-            return team['teamId'] if team['currentTeamMember']['teamMemberId'].to_s.strip == team_id
+            return team['teamId'] if team['teamMemberId'].to_s.strip == team_id
           end
           # Better message to inform user of misconfiguration as Apple now provides less friendly error as of 2019-02-12
           # This is especially important as Developer Portal team IDs are deprecated and should be replaced with App Store Connect teamIDs
@@ -92,7 +94,7 @@ module Spaceship
           puts("Please check that you set FASTLANE_TEAM_ID or FASTLANE_TEAM_NAME to the right value.")
           puts("Available Teams:")
           teams.each_with_index do |team, i|
-            puts("#{i + 1}) #{team['teamId']} \"#{team['name']}\" (#{team['type']})")
+            puts("#{i + 1}) #{team['teamId']} \"#{team['name']}\" (#{ENTITY_TYPE_MAP[team['entityType']]})")
           end
           raise "Multiple Teams found; unable to choose, terminal not interactive!"
         end
@@ -102,7 +104,7 @@ module Spaceship
           # Multiple teams, user has to select
           puts("Multiple teams found on the " + "Developer Portal".yellow + ", please enter the number of the team you want to use: ")
           teams.each_with_index do |team, i|
-            puts("#{i + 1}) #{team['teamId']} \"#{team['name']}\" (#{team['type']})")
+            puts("#{i + 1}) #{team['teamId']} \"#{team['name']}\" (#{ENTITY_TYPE_MAP[team['entityType']]})")
           end
 
           selected = ($stdin.gets || '').strip.to_i - 1

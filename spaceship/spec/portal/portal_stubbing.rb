@@ -26,14 +26,14 @@ class PortalStubbing
 
     # Optional: Team Selection
     def adp_stub_multiple_teams
-      stub_request(:post, 'https://developer.apple.com/services-account/QH65B2/account/listTeams.action').
-        to_return(status: 200, body: adp_read_fixture_file('listTeams_multiple.action.json'), headers: { 'Content-Type' => 'application/json' })
+      stub_request(:post, 'https://developer.apple.com/services-account/QH65B2/account/getTeams').
+        to_return(status: 200, body: adp_read_fixture_file('getTeams_multiple.json'), headers: { 'Content-Type' => 'application/json' })
     end
 
     def adp_stub_login
       # Most stuff is stubbed in tunes_stubbing (since it's shared)
-      stub_request(:post, 'https://developer.apple.com/services-account/QH65B2/account/listTeams.action').
-        to_return(status: 200, body: adp_read_fixture_file('listTeams.action.json'), headers: { 'Content-Type' => 'application/json' })
+      stub_request(:post, 'https://developer.apple.com/services-account/QH65B2/account/getTeams').
+        to_return(status: 200, body: adp_read_fixture_file('getTeams.json'), headers: { 'Content-Type' => 'application/json' })
     end
 
     def adp_stub_provisioning
