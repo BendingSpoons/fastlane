@@ -41,7 +41,7 @@ module Spaceship
     # @return (Array) A list of all available teams
     def teams
       return @teams if @teams
-      req = request(:post, "account/listTeams.action")
+      req = request(:post, "account/getTeams")
       @teams = parse_response(req, 'teams').sort_by do |team|
         [
           team['name'],
@@ -88,7 +88,7 @@ module Spaceship
     # Is the current session from an Enterprise In House account?
     def in_house?
       return @in_house unless @in_house.nil?
-      @in_house = (team_information['type'] == 'In-House')
+      @in_house = (team_information['entityType'] == 'h')
     end
 
     def platform_slug(mac)
