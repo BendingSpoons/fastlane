@@ -25,7 +25,7 @@ describe Spaceship::Client do
       let(:teams) { subject.teams }
       it 'returns the list of available teams' do
         expect(teams).to be_instance_of(Array)
-        expect(teams.first.keys).to eq(["status", "teamId", "type", "extendedTeamAttributes", "teamAgent", "memberships", "currentTeamMember", "name"])
+        expect(teams.first.keys).to eq(["teamId", "name", "status", "entityType", "agent", "program", "userRoles", "teamMemberId"])
       end
     end
 
@@ -36,8 +36,8 @@ describe Spaceship::Client do
 
       it "set custom Team ID" do
         allow_any_instance_of(Spaceship::PortalClient).to receive(:teams).and_return([
-                                                                                       { 'teamId' => 'XXXXXXXXXX', 'currentTeamMember' => { 'teamMemberId' => '' } },
-                                                                                       { 'teamId' => 'ABCDEF', 'currentTeamMember' => { 'teamMemberId' => '' } }
+                                                                                       { 'teamId' => 'XXXXXXXXXX', 'teamMemberId' => '' },
+                                                                                       { 'teamId' => 'ABCDEF', 'teamMemberId' => '' }
                                                                                      ])
 
         team_id = "ABCDEF"
@@ -58,8 +58,8 @@ describe Spaceship::Client do
 
       it "returns team_name from selected team_id" do
         allow_any_instance_of(Spaceship::PortalClient).to receive(:teams).and_return([
-                                                                                       { 'teamId' => 'XXXXXXXXXX', 'name' => 'SpaceShip', 'currentTeamMember' => { 'teamMemberId' => '' } },
-                                                                                       { 'teamId' => 'ABCDEF', 'name' => 'PirateShip', 'currentTeamMember' => { 'teamMemberId' => '' } }
+                                                                                       { 'teamId' => 'XXXXXXXXXX', 'name' => 'SpaceShip', 'teamMemberId' => '' },
+                                                                                       { 'teamId' => 'ABCDEF', 'name' => 'PirateShip', 'teamMemberId' => '' }
                                                                                      ])
 
         team_id = "ABCDEF"
@@ -109,7 +109,7 @@ describe Spaceship::Client do
       it 'returns all available information' do
         s = subject.team_information
         expect(s['status']).to eq('active')
-        expect(s['type']).to eq('Company/Organization')
+        expect(s['entityType']).to eq('c')
         expect(s['name']).to eq('SpaceShip')
       end
     end

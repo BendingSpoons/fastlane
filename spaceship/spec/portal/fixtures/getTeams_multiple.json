@@ -1,0 +1,63 @@
+{
+  "creationTimestamp": "2020-24-24T23:33:38Z",
+  "resultCode": 0,
+  "userLocale": "en_US",
+  "protocolVersion": "QH65B2",
+  "requestId": null,
+  "requestUrl": "https://developer.apple.com:443//services-account/QH65B2/account/getTeams",
+  "responseId": "6f4c5dcb-ecd0-460c-967b-dcd81f7be315",
+  "isAdmin": null,
+  "isMember": null,
+  "isAgent": null,
+  "pageNumber": null,
+  "pageSize": null,
+  "totalRecords": null,
+  "teams": [
+    {
+      "teamId": "XXXXXXXXXX",
+      "name": "SpaceShip",
+      "status": "active",
+      "entityType": "c",
+      "agent": {
+        "personId": 499707568,
+        "firstName": "Felix",
+        "lastName": "Krause",
+        "email": "test@spaceship.com",
+        "developerStatus": "active",
+        "teamMemberId": "YYYYYYYYYY"
+      },
+      "program": {
+        "type": "ds1",
+        "name": "iOS Developer Program",
+        "autoRenew": false,
+        "dateExpires": 1640246340000,
+        "status": "active"
+      },
+      "userRoles": ["Admin"],
+      "teamMemberId": "YYYYYYYYYY"
+    },
+    {
+      "teamId": "SecondTeam",
+      "name": "SecondTeamProfiName",
+      "status": "active",
+      "entityType": "h",
+      "agent": {
+        "personId": 499707568,
+        "firstName": "Felix",
+        "lastName": "Krause",
+        "email": "test2@spaceship.com",
+        "developerStatus": "active",
+        "teamMemberId": "YYYYYYYYYY"
+      },
+      "program": {
+        "type": "ds1",
+        "name": "iOS Developer Program",
+        "autoRenew": false,
+        "dateExpires": 1640246340000,
+        "status": "active"
+      },
+      "userRoles": ["Admin"],
+      "teamMemberId": "YYYYYYYYYY"
+    }
+  ]
+}
