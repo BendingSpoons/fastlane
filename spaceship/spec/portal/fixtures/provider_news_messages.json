@@ -1,0 +1,7 @@
+[ {
+    "id" : "provider_news",
+    "group" : "General",
+    "subject" : "Upcoming Authentication Requirement for App Store Connect",
+    "message" : "Starting February 2021, additional authentication will be required for all users to sign in to App Store Connect. You can enable two-step verification or two-factor authentication now for the Apple ID associated with your developer account. Visit the Security section of your <a href=\"https://appleid.apple.com/\" target=\"_blank\">Apple ID account</a> or the Apple ID section of <a href=\"https://support.apple.com/HT204915\" target=\"_blank\">Settings on your iPhone, iPad, or iPod touch</a>.",
+    "priority" : null
+  } ]

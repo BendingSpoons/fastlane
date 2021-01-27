@@ -340,6 +340,29 @@ the developer website<a/>.<br />"
         expect(response.first).to eq(expected_first_message)
       end
     end
+
+    describe '#fetch_provider_news_messages' do
+      it 'makes a request to fetch all Provider News warnings from Olympus' do
+        # Stub the GET request that the method will make
+        PortalStubbing.adp_stub_fetch_provider_news_messages
+
+        response = subject.fetch_provider_news_messages
+
+        # The method should make a GET request to this URL:
+        expect(a_request(:get, 'https://appstoreconnect.apple.com/olympus/v1/providerNews')).to have_been_made
+
+        # The method should just return the "message" key's value(s) in an array.
+
+        expected_first_message = "Starting February 2021, additional authentication \
+will be required for all users to sign in to App Store Connect. You can enable \
+two-step verification or two-factor authentication now for the Apple ID associated \
+with your developer account. Visit the Security section of your <a href=\"https://appleid.apple.com/\" \
+target=\"_blank\">Apple ID account</a> or the Apple ID section of <a href=\"https://support.apple.com/HT204915\" \
+target=\"_blank\">Settings on your iPhone, iPad, or iPod touch</a>."
+
+        expect(response.first).to eq(expected_first_message)
+      end
+    end
   end
 
   describe 'keys api' do
