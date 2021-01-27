@@ -680,6 +680,22 @@ module Spaceship
       return all_messages
     end
 
+    # Get provider news from App Store Connect's "olympus" endpoint
+    def fetch_provider_news_messages
+      all_messages = []
+
+      messages_request = request(:get, "https://appstoreconnect.apple.com/olympus/v1/providerNews")
+      body = messages_request.body
+      if body
+        body = JSON.parse(body) if body.kind_of?(String)
+        body.map do |messages|
+          all_messages.push(messages["message"])
+        end
+      end
+
+      return all_messages
+    end
+
     #####################################################
     # @!group Helpers
     #####################################################

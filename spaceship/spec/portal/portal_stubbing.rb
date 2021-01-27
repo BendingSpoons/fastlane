@@ -343,5 +343,10 @@ class PortalStubbing
       stub_request(:get, 'https://appstoreconnect.apple.com/olympus/v1/contractMessages').
         to_return(status: 200, body: adp_read_fixture_file('program_license_agreement_messages.json'), headers: { 'Content-Type' => 'application/json' })
     end
+
+    def adp_stub_fetch_provider_news_messages
+      stub_request(:get, 'https://appstoreconnect.apple.com/olympus/v1/providerNews').
+        to_return(status: 200, body: adp_read_fixture_file('provider_news_messages.json'), headers: { 'Content-Type' => 'application/json' })
+    end
   end
 end
