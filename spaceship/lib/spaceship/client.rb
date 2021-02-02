@@ -313,6 +313,24 @@ module Spaceship
       return path
     end
 
+    # Returns preferred path for storing global
+    # authentication mutex for two step verification.
+    def persistent_auth_mutex_path
+      if ENV["SPACESHIP_AUTH_MUTEX_PATH"]
+        path = File.expand_path(File.join(ENV["SPACESHIP_AUTH_MUTEX_PATH"], "spaceship", self.user, "auth_mutex"))
+      else
+        [File.join(self.fastlane_user_dir, "spaceship"), "~/.spaceship", "/var/tmp/spaceship", "#{Dir.tmpdir}/spaceship"].each do |dir|
+          dir_parts = File.split(dir)
+          if directory_accessible?(File.expand_path(dir_parts.first))
+            path = File.expand_path(File.join(dir, self.user, "auth_mutex"))
+            break
+          end
+        end
+      end
+
+      path
+    end
+
     #####################################################
     # @!group Automatic Paging
     #####################################################
@@ -408,12 +426,31 @@ module Spaceship
       end
     end
 
+    # Wrapper for send_shared_login_request_helper() that handles concurrent login attempts via a global authentication
+    # mutex. The mutex relies on filesystem locking to work across several processes.
+    def send_shared_login_request(user, password)
+      authenticated = false
+
+      File.open(persistent_auth_mutex_path, File::CREAT) {|f|
+        puts("Attempting to obtain lock on authentication mutex.")
+
+        # When used with File::LOCK_EX, flock() will wait until the lock is released
+        f.flock(File::LOCK_EX)
+
+        puts("Obtained lock on authentication mutex, proceeding with login procedure.")
+        authenticated = send_shared_login_request_helper(user, password)
+      }
+
+      puts("Authentication lock released.")
+      authenticated
+    end
+
     # This method is used for both the Apple Dev Portal and App Store Connect
     # This will also handle 2 step verification and 2 factor authentication
     #
     # It is called in `send_login_request` of sub classes (which the method `login`, above, transferred over to via `do_login`)
     # rubocop:disable Metrics/PerceivedComplexity
-    def send_shared_login_request(user, password)
+    def send_shared_login_request_helper(user, password)
       # Check if we have a cached/valid session
       #
       # Background:
