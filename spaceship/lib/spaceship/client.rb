@@ -440,6 +440,12 @@ module Spaceship
           # In this case we don't actually care about the exact exception, and why it was failing
           # because either way, we'll have to do a fresh login, where we do the actual error handling
           puts("Available session is not valid any more. Continuing with normal login.")
+
+          # BSP: this should not be necessary, because the login() operation below should always provide the subsequent
+          # call to fetch_olympus_session() with a valid cookie. However, we noticed some unhandled 401 being raised by
+          # that call occasionaly that we haven't been able to fully debug. Cleaning the cookie before making the call
+          # seems to help, so here we do just that.
+          @cookie.cleanup(session: true)
         end
       end
       #
