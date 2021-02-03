@@ -316,10 +316,13 @@ module Spaceship
       else
         [File.join(self.fastlane_user_dir, "spaceship"), "~/.spaceship", "/var/tmp/spaceship", "#{Dir.tmpdir}/spaceship"].each do |dir|
           dir_parts = File.split(dir)
-          if directory_accessible?(File.expand_path(dir_parts.first))
-            path = File.expand_path(File.join(dir, self.user, "auth_mutex"))
-            break
-          end
+          next unless directory_accessible?(File.expand_path(dir_parts.first))
+          # Create the directory if it doesn't exist
+          path = File.expand_path(File.join(dir, self.user))
+          FileUtils.mkdir_p(path) unless File.directory?(path)
+
+          path = File.expand_path(File.join(path, "auth_mutex"))
+          break
         end
       end
 
@@ -426,7 +429,7 @@ module Spaceship
     def send_shared_login_request(user, password)
       authenticated = false
 
-      File.open(persistent_auth_mutex_path, File::CREAT) {|f|
+      File.open(persistent_auth_mutex_path, "w") do |f|
         puts("Attempting to obtain lock on authentication mutex.")
 
         # When used with File::LOCK_EX, flock() will wait until the lock is released
@@ -434,7 +437,7 @@ module Spaceship
 
         puts("Obtained lock on authentication mutex, proceeding with login procedure.")
         authenticated = send_shared_login_request_helper(user, password)
-      }
+      end
 
       puts("Authentication lock released.")
       authenticated
@@ -616,6 +619,10 @@ module Spaceship
     #####################################################
 
     def load_session_from_file
+      # Don't load session from file if requested. This flag is useful to let a background process refresh the
+      # current session without deleting the cookie.
+      return false if ENV["SPACESHIP_SKIP_SESSION_COOKIE_FROM_FILE"]
+
       begin
         if File.exist?(persistent_cookie_path)
           puts("Loading session from '#{persistent_cookie_path}'")
