@@ -313,6 +313,27 @@ module Spaceship
       return path
     end
 
+    # Returns preferred path for storing global
+    # authentication mutex for two step verification.
+    def persistent_auth_mutex_path
+      if ENV["SPACESHIP_AUTH_MUTEX_PATH"]
+        path = File.expand_path(File.join(ENV["SPACESHIP_AUTH_MUTEX_PATH"], "spaceship", self.user, "auth_mutex"))
+      else
+        [File.join(self.fastlane_user_dir, "spaceship"), "~/.spaceship", "/var/tmp/spaceship", "#{Dir.tmpdir}/spaceship"].each do |dir|
+          dir_parts = File.split(dir)
+          next unless directory_accessible?(File.expand_path(dir_parts.first))
+          # Create the directory if it doesn't exist
+          path = File.expand_path(File.join(dir, self.user))
+          FileUtils.mkdir_p(path) unless File.directory?(path)
+
+          path = File.expand_path(File.join(path, "auth_mutex"))
+          break
+        end
+      end
+
+      path
+    end
+
     #####################################################
     # @!group Automatic Paging
     #####################################################
@@ -412,8 +433,47 @@ module Spaceship
     # This will also handle 2 step verification and 2 factor authentication
     #
     # It is called in `send_login_request` of sub classes (which the method `login`, above, transferred over to via `do_login`)
-    # rubocop:disable Metrics/PerceivedComplexity
+    #
+    # BSP: the core logic has been moved to load_cached_session() and login_request_helper(). This method acts as a
+    # wrapper to handle concurrent login attempts via a global authentication mutex. The mutex relies on filesystem
+    # locking to work across several processes.
     def send_shared_login_request(user, password)
+      # Check if we have a cached/valid session
+      return true if load_cached_session
+
+      #
+      # After this point, we sure have no valid session any more and have to create a new one
+      #
+
+      # To prevent multiple authentication attempts, this section is protected by a mutex
+      authenticated = false
+
+      File.open(persistent_auth_mutex_path, "w") do |f|
+        puts("Attempting to obtain lock on authentication mutex.")
+
+        # When used with File::LOCK_EX, flock() will wait until the lock is released
+        f.flock(File::LOCK_EX)
+
+        # If we get past the lock, it might be either because we're the first process to attempt the renew, or because
+        # we were another request waiting in queue for the renew to happen
+        #
+        # Since we can't know which is which, let's first see if the session has been renewed by the previous holder
+        # of the mutex
+        puts("Obtained lock on authentication mutex, checking if session has been renewed in the meanwhile.")
+
+        authenticated = load_cached_session
+
+        unless authenticated
+          puts("No valid cached session found, proceeding with mutex-protected login.")
+          authenticated = login_request_helper(user, password)
+        end
+      end
+
+      puts("Authentication lock released.")
+      authenticated
+    end
+
+    def load_cached_session
       # Check if we have a cached/valid session
       #
       # Background:
@@ -460,10 +520,12 @@ module Spaceship
           # see above
         end
       end
-      #
-      # After this point, we sure have no valid session any more and have to create a new one
-      #
 
+      # No valid session found
+      false
+    end
+
+    def login_request_helper(user, password)
       data = {
         accountName: user,
         password: password,
@@ -596,6 +658,10 @@ module Spaceship
     #####################################################
 
     def load_session_from_file
+      # Don't load session from file if requested. This flag is useful to let a background process refresh the
+      # current session without deleting the cookie.
+      return false if ENV["SPACESHIP_SKIP_SESSION_COOKIE_FROM_FILE"]
+
       begin
         if File.exist?(persistent_cookie_path)
           puts("Loading session from '#{persistent_cookie_path}'")
