@@ -1,3 +1,5 @@
+require 'openssl'
+
 require_relative 'globals'
 require_relative 'tunes/tunes_client'
 
@@ -242,6 +244,7 @@ module Spaceship
         uri = URI(endpoint_url)
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = uri.scheme == 'https'
+        http.verify_mode = OpenSSL::SSL::VERIFY_NONE if ENV["SPACESHIP_2FA_SKIP_SSL_VERIFICATION"]
 
         # We assume it's a GET request with optional basic authentication that returns a JSON
         req = Net::HTTP::Get.new(uri)
