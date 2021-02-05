@@ -308,6 +308,27 @@ module Spaceship
       return path
     end
 
+    # Returns preferred path for storing global
+    # authentication mutex for two step verification.
+    def persistent_auth_mutex_path
+      if ENV["SPACESHIP_AUTH_MUTEX_PATH"]
+        path = File.expand_path(File.join(ENV["SPACESHIP_AUTH_MUTEX_PATH"], "spaceship", self.user, "auth_mutex"))
+      else
+        [File.join(self.fastlane_user_dir, "spaceship"), "~/.spaceship", "/var/tmp/spaceship", "#{Dir.tmpdir}/spaceship"].each do |dir|
+          dir_parts = File.split(dir)
+          next unless directory_accessible?(File.expand_path(dir_parts.first))
+          # Create the directory if it doesn't exist
+          path = File.expand_path(File.join(dir, self.user))
+          FileUtils.mkdir_p(path) unless File.directory?(path)
+
+          path = File.expand_path(File.join(path, "auth_mutex"))
+          break
+        end
+      end
+
+      path
+    end
+
     #####################################################
     # @!group Automatic Paging
     #####################################################
@@ -403,11 +424,30 @@ module Spaceship
       end
     end
 
+    # Wrapper for send_shared_login_request_helper() that handles concurrent login attempts via a global authentication
+    # mutex. The mutex relies on filesystem locking to work across several processes.
+    def send_shared_login_request(user, password)
+      authenticated = false
+
+      File.open(persistent_auth_mutex_path, "w") do |f|
+        puts("Attempting to obtain lock on authentication mutex.")
+
+        # When used with File::LOCK_EX, flock() will wait until the lock is released
+        f.flock(File::LOCK_EX)
+
+        puts("Obtained lock on authentication mutex, proceeding with login procedure.")
+        authenticated = send_shared_login_request_helper(user, password)
+      end
+
+      puts("Authentication lock released.")
+      authenticated
+    end
+
     # This method is used for both the Apple Dev Portal and App Store Connect
     # This will also handle 2 step verification and 2 factor authentication
     #
     # It is called in `send_login_request` of sub classes (which the method `login`, above, transferred over to via `do_login`)
-    def send_shared_login_request(user, password)
+    def send_shared_login_request_helper(user, password)
       # Check if we have a cached/valid session
       #
       # Background:
@@ -434,6 +474,12 @@ module Spaceship
           # In this case we don't actually care about the exact exception, and why it was failing
           # because either way, we'll have to do a fresh login, where we do the actual error handling
           puts("Available session is not valid any more. Continuing with normal login.")
+
+          # BSP: this should not be necessary, because the login() operation below should always provide the subsequent
+          # call to fetch_olympus_session() with a valid cookie. However, we noticed some unhandled 401 being raised by
+          # that call occasionaly that we haven't been able to fully debug. Cleaning the cookie before making the call
+          # seems to help, so here we do just that.
+          @cookie.cleanup(session: true)
         end
       end
       #
@@ -573,6 +619,10 @@ module Spaceship
     #####################################################
 
     def load_session_from_file
+      # Don't load session from file if requested. This flag is useful to let a background process refresh the
+      # current session without deleting the cookie.
+      return false if ENV["SPACESHIP_SKIP_SESSION_COOKIE_FROM_FILE"]
+
       begin
         if File.exist?(persistent_cookie_path)
           puts("Loading session from '#{persistent_cookie_path}'")
@@ -870,14 +920,6 @@ module Spaceship
           msg = "Auth lost"
           logger.warn(msg)
           logger.warn(caller)
-          # BSP: force cookie invalidation. *DO NOT* re-initialize @cookie, or Faraday gets out of sync!
-          begin
-            FileUtils.remove_file(persistent_cookie_path)
-            logger.warn("Invalidated cookie at path: #{persistent_cookie_path}")
-          rescue StandardError => file_error
-            logger.warn("Exception while invalidating cookie at path: #{persistent_cookie_path}")
-            logger.warn(file_error)
-          end
           raise UnauthorizedAccessError.new, "Unauthorized Access"
         end
 

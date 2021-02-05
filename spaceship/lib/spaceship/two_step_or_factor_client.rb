@@ -1,3 +1,5 @@
+require 'openssl'
+
 require_relative 'globals'
 require_relative 'tunes/tunes_client'
 
@@ -134,18 +136,20 @@ module Spaceship
 
         phone_number = env_2fa_sms_default_phone_number
         phone_id = phone_id_from_number(response.body["trustedPhoneNumbers"], phone_number)
+        push_mode = push_mode_from_phone_id(response.body["trustedPhoneNumbers"], phone_id)
         # don't request sms if no trusted devices and env default is the only trusted number,
         # code was automatically sent
         should_request_code = !sms_automatically_sent(response)
         code_type = 'phone'
-        body = request_two_factor_code_from_phone(phone_id, phone_number, code_length, should_request_code)
+        body = request_two_factor_code_from_phone(phone_id, phone_number, code_length, push_mode, should_request_code)
       elsif sms_automatically_sent(response) # sms fallback, code was automatically sent
         fallback_number = response.body["trustedPhoneNumbers"].first
         phone_number = fallback_number["numberWithDialCode"]
         phone_id = fallback_number["id"]
+        push_mode = fallback_number['pushMode']
 
         code_type = 'phone'
-        body = request_two_factor_code_from_phone(phone_id, phone_number, code_length, false)
+        body = request_two_factor_code_from_phone(phone_id, phone_number, code_length, push_mode, false)
       elsif sms_fallback(response) # sms fallback but code wasn't sent bec > 1 phone number
         code_type = 'phone'
         body = request_two_factor_code_from_phone_choose(response.body["trustedPhoneNumbers"], code_length)
@@ -196,9 +200,15 @@ module Spaceship
           puts("Error: Incorrect verification code")
           depth += 1
           return handle_two_factor(response, depth)
-        end
+        else
+          # We shouldn't crash immediately, let's try a few times
+          puts("Error: Unexpected issue while authenticating with 2FA")
+          puts(ex.to_s)
+          depth += 1
+          return handle_two_factor(response, depth) if depth < 10 # Let's not try forever
 
-        raise ex
+          raise ex
+        end
       end
 
       store_session
@@ -223,6 +233,51 @@ module Spaceship
     # extracted into its own method for testing
     def ask_for_2fa_code(text)
       ask(text)
+    end
+
+    def retrieve_2fa_code_from_url(endpoint_url)
+      # If the 2FA code is delivered with a phone call, chances are that we need to wait for a while for a
+      # transcription to be available. In addition, ideally we'd like to enter the code as soon as we have it to
+      # minimize the chance of it expiring.
+      # As a compromise, let's check for 5 minutes at intervals of 10 seconds
+      max_retries = 30
+      retries = 0
+      wait_between_retries = 10
+
+      while retries < max_retries
+        # Query the URL to check if a 2FA code is available
+        uri = URI(endpoint_url)
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = uri.scheme == 'https'
+        http.verify_mode = OpenSSL::SSL::VERIFY_NONE if ENV["SPACESHIP_2FA_SKIP_SSL_VERIFICATION"]
+
+        # We assume it's a GET request with optional basic authentication that returns a JSON
+        req = Net::HTTP::Get.new(uri)
+        req.basic_auth(uri.user, uri.password) unless uri.user.nil? || uri.password.nil?
+        req.add_field('Content-Type', 'application/json')
+        res = http.request(req)
+
+        # The response must be a 200 OK, contain valid JSON, and include an "auth_code" field that is either
+        # null (no code) or a valid 2FA code.
+        # TODO check the auth code more appropriately (regex?)
+        if res.code.to_i == 200
+          begin
+            data = JSON.parse(res.body)
+            return data["auth_code"] unless data["auth_code"].nil?
+          rescue JSON::ParserError
+            puts("Server response is not a valid JSON.")
+          end
+        end
+
+        puts("Server did not reply with a valid 2FA code, retrying in #{wait_between_retries} seconds...")
+        retries += 1
+        sleep(wait_between_retries)
+      end
+
+      # We did not succeed in authenticating, let's return a mock code to try another round
+      # We use a randomly-generated code to avoid letting Apple discover a pattern in our errors
+      # Note, however, that this should happen quite rarely
+      Array.new(6).map { rand(10) }.join
     end
 
     # extracted into its own method for testing
@@ -275,6 +330,26 @@ If it is, please open an issue at https://github.com/fastlane/fastlane/issues/ne
       end
     end
 
+    def push_mode_from_phone_id(phone_numbers, phone_id)
+      phone_numbers.each do |phone|
+        return phone['pushMode'] if phone['id'] == phone_id
+      end
+
+      # If no pushMode was supplied, assume sms
+      return "sms"
+    end
+
+    def push_mode_from_masked_number(phone_numbers, masked_number)
+      # TODO: the usage of this method seems broken: the allegedly masked phone number is actually a non-masked number
+      # Therefore, this check is bound to fail. Maybe we should open a PR on upstream to use the ID instead?
+      phone_numbers.each do |phone|
+        return phone['pushMode'] if phone['numberWithDialCode'] == masked_number
+      end
+
+      # If no pushMode was supplied, assume sms
+      return "sms"
+    end
+
     def request_two_factor_code_from_phone_choose(phone_numbers, code_length)
       puts("Please select a trusted phone number to send code to:")
 
@@ -283,18 +358,19 @@ If it is, please open an issue at https://github.com/fastlane/fastlane/issues/ne
       end
       chosen = choose_phone_number(available)
       phone_id = phone_id_from_masked_number(phone_numbers, chosen)
+      push_mode = push_mode_from_phone_id(phone_numbers, phone_id)
 
-      request_two_factor_code_from_phone(phone_id, chosen, code_length)
+      request_two_factor_code_from_phone(phone_id, chosen, code_length, push_mode)
     end
 
     # this is used in two places: after choosing a phone number and when a phone number is set via ENV var
-    def request_two_factor_code_from_phone(phone_id, phone_number, code_length, should_request_code = true)
+    def request_two_factor_code_from_phone(phone_id, phone_number, code_length, push_mode = "sms", should_request_code = true)
       if should_request_code
         # Request code
         r = request(:put) do |req|
           req.url("https://idmsa.apple.com/appleauth/auth/verify/phone")
           req.headers['Content-Type'] = 'application/json'
-          req.body = { "phoneNumber" => { "id" => phone_id }, "mode" => "sms" }.to_json
+          req.body = { "phoneNumber" => { "id" => phone_id }, "mode" => push_mode }.to_json
           update_request_headers(req)
         end
 
@@ -305,9 +381,17 @@ If it is, please open an issue at https://github.com/fastlane/fastlane/issues/ne
         puts("Successfully requested text message to #{phone_number}")
       end
 
-      code = ask_for_2fa_code("Please enter the #{code_length} digit code you received at #{phone_number}:")
+      env_2fa_auto_login_url = ENV["SPACESHIP_2FA_AUTO_LOGIN_URL"]
 
-      return { "securityCode" => { "code" => code.to_s }, "phoneNumber" => { "id" => phone_id }, "mode" => "sms" }.to_json
+      if env_2fa_auto_login_url
+        puts("Environment variable `SPACESHIP_2FA_AUTO_LOGIN_URL` is set, automatically loading 2FA from specified URL")
+        puts("")
+        code = retrieve_2fa_code_from_url(env_2fa_auto_login_url)
+      else
+        code = ask_for_2fa_code("Please enter the #{code_length} digit code you received at #{phone_number}:")
+      end
+
+      return { "securityCode" => { "code" => code.to_s }, "phoneNumber" => { "id" => phone_id }, "mode" => push_mode }.to_json
     end
 
     def store_session
