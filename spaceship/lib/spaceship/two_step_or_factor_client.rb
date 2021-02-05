@@ -200,9 +200,15 @@ module Spaceship
           puts("Error: Incorrect verification code")
           depth += 1
           return handle_two_factor(response, depth)
-        end
+        else
+          # We shouldn't crash immediately, let's try a few times
+          puts("Error: Unexpected issue while authenticating with 2FA")
+          puts(ex.to_s)
+          depth += 1
+          return handle_two_factor(response, depth) if depth < 10 # Let's not try forever
 
-        raise ex
+          raise ex
+        end
       end
 
       store_session
