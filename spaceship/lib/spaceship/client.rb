@@ -439,7 +439,7 @@ module Spaceship
     # locking to work across several processes.
     def send_shared_login_request(user, password)
       # Check if we have a cached/valid session
-      return if load_cached_session
+      return true if load_cached_session
 
       #
       # After this point, we sure have no valid session any more and have to create a new one
