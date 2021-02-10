@@ -429,9 +429,23 @@ module Spaceship
       end
     end
 
-    # Wrapper for send_shared_login_request_helper() that handles concurrent login attempts via a global authentication
-    # mutex. The mutex relies on filesystem locking to work across several processes.
+    # This method is used for both the Apple Dev Portal and App Store Connect
+    # This will also handle 2 step verification and 2 factor authentication
+    #
+    # It is called in `send_login_request` of sub classes (which the method `login`, above, transferred over to via `do_login`)
+    #
+    # BSP: the core logic has been moved to load_cached_session() and login_request_helper(). This method acts as a
+    # wrapper to handle concurrent login attempts via a global authentication mutex. The mutex relies on filesystem
+    # locking to work across several processes.
     def send_shared_login_request(user, password)
+      # Check if we have a cached/valid session
+      return if load_cached_session
+
+      #
+      # After this point, we sure have no valid session any more and have to create a new one
+      #
+
+      # To prevent multiple authentication attempts, this section is protected by a mutex
       authenticated = false
 
       File.open(persistent_auth_mutex_path, "w") do |f|
@@ -440,20 +454,26 @@ module Spaceship
         # When used with File::LOCK_EX, flock() will wait until the lock is released
         f.flock(File::LOCK_EX)
 
-        puts("Obtained lock on authentication mutex, proceeding with login procedure.")
-        authenticated = send_shared_login_request_helper(user, password)
+        # If we get past the lock, it might be either because we're the first process to attempt the renew, or because
+        # we were another request waiting in queue for the renew to happen
+        #
+        # Since we can't know which is which, let's first see if the session has been renewed by the previous holder
+        # of the mutex
+        puts("Obtained lock on authentication mutex, checking if session has been renewed in the meanwhile.")
+
+        authenticated = load_cached_session
+
+        unless authenticated
+          puts("No valid cached session found, proceeding with mutex-protected login.")
+          authenticated = login_request_helper(user, password)
+        end
       end
 
       puts("Authentication lock released.")
       authenticated
     end
 
-    # This method is used for both the Apple Dev Portal and App Store Connect
-    # This will also handle 2 step verification and 2 factor authentication
-    #
-    # It is called in `send_login_request` of sub classes (which the method `login`, above, transferred over to via `do_login`)
-    # rubocop:disable Metrics/PerceivedComplexity
-    def send_shared_login_request_helper(user, password)
+    def load_cached_session
       # Check if we have a cached/valid session
       #
       # Background:
@@ -500,10 +520,12 @@ module Spaceship
           # see above
         end
       end
-      #
-      # After this point, we sure have no valid session any more and have to create a new one
-      #
 
+      # No valid session found
+      false
+    end
+
+    def login_request_helper(user, password)
       data = {
         accountName: user,
         password: password,
