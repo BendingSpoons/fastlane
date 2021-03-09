@@ -1085,6 +1085,16 @@ module Spaceship
           tunes_request_client.get("endUserLicenseAgreements/#{end_user_license_agreement_id}/territories", params)
         end
       end
+
+      #
+      # financeReports
+      #
+
+      def get_financial_reports(filter: {})
+        params = tunes_request_client.build_params(filter: filter, includes: nil, limit: nil, sort: nil)
+        tunes_request_client.get("financeReports", params, true)
+      end
+
     end
   end
 end
