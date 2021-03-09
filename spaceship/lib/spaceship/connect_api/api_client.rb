@@ -101,7 +101,8 @@ module Spaceship
         return params
       end
 
-      def get(url_or_path, params = nil)
+
+      def get(url_or_path, params = nil, binary = false)
         response = with_asc_retry do
           request(:get) do |req|
             req.url(url_or_path)
@@ -110,7 +111,7 @@ module Spaceship
             req.headers['Content-Type'] = 'application/json'
           end
         end
-        handle_response(response)
+        handle_response(response, binary: binary)
       end
 
       def post(url_or_path, body, tries: 5)
@@ -183,7 +184,7 @@ module Spaceship
         end
       end
 
-      def handle_response(response)
+      def handle_response(response, binary: false)
         raise UnexpectedResponse, "Unhandled exception during API call" if response.nil?
 
         if (200...300).cover?(response.status) && (response.body.nil? || response.body.empty?)
@@ -191,6 +192,8 @@ module Spaceship
         end
 
         raise InternalServerError, "Server error got #{response.status}" if (500...600).cover?(response.status)
+
+        return response.body if binary
 
         unless response.body.kind_of?(Hash)
           raise UnexpectedResponse, response.body
