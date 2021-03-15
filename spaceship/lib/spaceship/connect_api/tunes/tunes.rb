@@ -318,7 +318,22 @@ module Spaceship
         #
         def get_app_price_points(filter: {}, includes: nil, limit: nil, sort: nil)
           params = tunes_request_client.build_params(filter: filter, includes: includes, limit: limit, sort: sort)
+          params[:fields] = {appPricePoints: "customerPrice,priceTier,proceeds,territory"}
           tunes_request_client.get("appPricePoints", params)
+        end
+
+        def get_app_price_points_for_tier(app_price_tier_id: nil, filter: {}, includes: nil, limit: nil, sort: nil)
+          params = tunes_request_client.build_params(filter: filter, includes: includes, limit: limit, sort: sort)
+          params[:fields] = {appPricePoints: "customerPrice,priceTier,proceeds,territory"}
+          tunes_request_client.get("appPriceTiers/#{app_price_tier_id}/pricePoints", params)
+        end
+
+        #
+        # appPriceTiers
+        #
+        def get_app_price_tiers(filter: {}, includes: nil, limit: nil, sort: nil)
+          params = tunes_request_client.build_params(filter: filter, includes: includes, limit: limit, sort: sort)
+          tunes_request_client.get("appPriceTiers", params)
         end
 
         #
