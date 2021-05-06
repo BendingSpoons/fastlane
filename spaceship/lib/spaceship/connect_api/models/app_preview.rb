@@ -143,13 +143,14 @@ module Spaceship
         # Poll for video processing completion to set still frame time
         wait_for_processing = true unless frame_time_code.nil?
         if wait_for_processing
-          do_wait_for_processing(app_preview_id: preview.id, frame_time_code: frame_time_code)
+          do_wait_for_processing(client: client, app_preview_id: preview.id, frame_time_code: frame_time_code)
         end
 
         preview
       end
 
-      def self.do_wait_for_processing(app_preview_id: nil, frame_time_code: nil)
+      def self.do_wait_for_processing(client: nil, app_preview_id: nil, frame_time_code: nil)
+        client ||= Spaceship::ConnectAPI
         loop do
           preview = Spaceship::ConnectAPI::AppPreview.get(client: client, app_preview_id: app_preview_id)
           unless preview.video_url.nil?
