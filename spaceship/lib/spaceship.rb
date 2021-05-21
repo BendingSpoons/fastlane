@@ -19,6 +19,8 @@ require_relative 'spaceship/connect_api'
 require_relative 'spaceship/connect_api/spaceship'
 require_relative 'spaceship/spaceauth_runner'
 
+require_relative 'spaceship/utils'
+
 require_relative 'spaceship/module'
 
 # Support for legacy wrappers
