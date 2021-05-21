@@ -13,5 +13,6 @@ require_relative 'deliver/app_screenshot'
 require_relative 'deliver/html_generator'
 require_relative 'deliver/generate_summary'
 require_relative 'deliver/bsp_upload_screenshots'
+require_relative 'deliver/bsp_upload_app_previews'
 
 require_relative 'deliver/module'
