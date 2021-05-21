@@ -1,5 +1,7 @@
 require_relative '../model'
 require_relative '../file_uploader'
+require_relative './app_preview_set'
+require_relative '../../errors'
 require 'spaceship/globals'
 
 require 'digest/md5'
@@ -37,8 +39,16 @@ module Spaceship
         return "appPreviews"
       end
 
+      def awaiting_upload?
+        (asset_delivery_state || {})["state"] == "AWAITING_UPLOAD"
+      end
+
       def complete?
         (asset_delivery_state || {})["state"] == "COMPLETE"
+      end
+
+      def error?
+        (asset_delivery_state || {})["state"] == "FAILED"
       end
 
       #
@@ -56,8 +66,9 @@ module Spaceship
       # @param path The path of the file
       # @param frame_time_code The time code for the preview still frame (ex: "00:00:07:01")
       def self.create(client: nil, app_preview_set_id: nil, path: nil, wait_for_processing: true, frame_time_code: nil)
-        client ||= Spaceship::ConnectAPI
         require 'faraday'
+
+        client ||= Spaceship::ConnectAPI
 
         filename = File.basename(path)
         filesize = File.size(path)
@@ -69,10 +80,42 @@ module Spaceship
         }
 
         # Create placeholder
-        preview = client.post_app_preview(
-          app_preview_set_id: app_preview_set_id,
-          attributes: post_attributes
-        ).first
+        begin
+          preview = client.post_app_preview(
+            app_preview_set_id: app_preview_set_id,
+            attributes: post_attributes
+          ).first
+        rescue Spaceship::InternalServerError => error
+          # Sometimes creating a preview with the web session App Store Connect API
+          # will result in a false failure. The response will return a 503 but the database
+          # insert will eventually go through.
+          #
+          # When this is observed, we will poll until we find the matching preview that
+          # is awaiting for upload and file size
+          #
+          # The equivalent for the screenshots: https://github.com/fastlane/fastlane/pull/16842
+          time = Time.now.to_i
+
+          timeout_minutes = (ENV["SPACESHIP_PREVIEW_UPLOAD_TIMEOUT"] || 20).to_i
+
+          loop do
+            puts("Waiting for preview to appear before uploading...")
+            sleep(30)
+
+            previews = Spaceship::ConnectAPI::AppPreviewSet
+                       .get(app_preview_set_id: app_preview_set_id)
+                       .app_previews
+
+            preview = previews.find do |p|
+              p.awaiting_upload? && p.file_size == filesize
+            end
+
+            break if preview
+
+            time_diff = Time.now.to_i - time
+            raise error if time_diff >= (60 * timeout_minutes)
+          end
+        end
 
         # Upload the file
         upload_operations = preview.upload_operations
@@ -80,6 +123,7 @@ module Spaceship
 
         # Update file uploading complete
         patch_attributes = {
+          previewFrameTimeCode: "00:00:00:00",
           uploaded: true,
           sourceFileChecksum: Digest::MD5.hexdigest(bytes)
         }
@@ -99,25 +143,30 @@ module Spaceship
         # Poll for video processing completion to set still frame time
         wait_for_processing = true unless frame_time_code.nil?
         if wait_for_processing
-          loop do
-            unless preview.video_url.nil?
-              puts("Preview processing complete!") if Spaceship::Globals.verbose?
-              preview = preview.update(attributes: {
-                previewFrameTimeCode: frame_time_code
-              })
-              puts("Updated preview frame time code!") if Spaceship::Globals.verbose?
-              break
-            end
-
-            sleep_time = 30
-            puts("Waiting #{sleep_time} seconds before checking status of processing...") if Spaceship::Globals.verbose?
-            sleep(sleep_time)
-
-            preview = Spaceship::ConnectAPI::AppPreview.get(client: client, app_preview_id: preview.id)
-          end
+          do_wait_for_processing(client: client, app_preview_id: preview.id, frame_time_code: frame_time_code)
         end
 
         preview
+      end
+
+      def self.do_wait_for_processing(client: nil, app_preview_id: nil, frame_time_code: nil)
+        client ||= Spaceship::ConnectAPI
+        loop do
+          preview = Spaceship::ConnectAPI::AppPreview.get(client: client, app_preview_id: app_preview_id)
+          unless preview.video_url.nil?
+            puts("Preview processing complete!") if Spaceship::Globals.verbose?
+            break if frame_time_code.nil?
+            preview.update(attributes: {
+                previewFrameTimeCode: frame_time_code
+            })
+            puts("Updated preview frame time code!") if Spaceship::Globals.verbose?
+            break
+          end
+
+          sleep_time = 30
+          puts("Waiting #{sleep_time} seconds before checking status of processing...") if Spaceship::Globals.verbose?
+          sleep(sleep_time)
+        end
       end
 
       def update(client: nil, attributes: nil)
