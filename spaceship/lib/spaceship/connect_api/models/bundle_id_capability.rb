@@ -80,10 +80,17 @@ module Spaceship
         return resp.flat_map(&:to_models)
       end
 
-      def self.create(client: nil, bundle_id_id:, capability_type:, settings: [])
+      def self.create(client: nil, bundle_id_id:, capability_type:, settings: [], extra_relationships: nil)
         client ||= Spaceship::ConnectAPI
-        resp = client.post_bundle_id_capability(bundle_id_id: bundle_id_id, capability_type: capability_type, settings: settings)
+        resp = client.post_bundle_id_capability(bundle_id_id: bundle_id_id, capability_type: capability_type, settings: settings, extra_relationships: extra_relationships)
         return resp.to_models.first
+      end
+
+      def self.get(client: nil, bundle_id_id:, capability_type:)
+        client ||= Spaceship::ConnectAPI
+        all_capabilities = client.get_bundle_id_capabilities(bundle_id_id: bundle_id_id).all_pages.flat_map(&:to_models)
+        # Comparison must be done using the same type, enforce everything to string for safety
+        all_capabilities.find { |capability| capability.capabilityType.to_s == capability_type.to_s }
       end
 
       def delete!(client: nil, filter: {}, includes: nil, limit: nil, sort: nil)

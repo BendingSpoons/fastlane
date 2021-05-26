@@ -54,7 +54,7 @@ module Spaceship
           provisioning_request_client.get("bundleIds/#{bundle_id_id}/bundleIdCapabilities", params)
         end
 
-        def post_bundle_id_capability(bundle_id_id:, capability_type:, settings: [])
+        def post_bundle_id_capability(bundle_id_id:, capability_type:, settings: [], extra_relationships: nil)
           body = {
             data: {
               attributes: {
@@ -72,6 +72,7 @@ module Spaceship
               }
             }
           }
+          body[:data][:relationships].update(extra_relationships) unless extra_relationships.nil?
 
           provisioning_request_client.post("bundleIdCapabilities", body)
         end
