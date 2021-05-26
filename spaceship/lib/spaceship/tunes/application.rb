@@ -169,6 +169,24 @@ module Spaceship
         Tunes::AppRatings.new(attrs)
       end
 
+      def reviews_at_page(store_front = '', version_id = '', page = 0, sort = 'REVIEW_SORT_ORDER_MOST_RECENT')
+        raw_reviews = client.get_reviews(apple_id, platform, store_front, version_id, page, sort)
+        {
+            count: raw_reviews['reviewCount'],
+            reviews: raw_reviews['reviews'].map do |review|
+              AppReview.factory(review["value"])
+            end
+        }
+      end
+
+      def create_developer_response(review_id, text)
+        client.create_developer_response!(app_id: apple_id, platform: platform, review_id: review_id, response: text)
+      end
+
+      def update_developer_response(review_id, response_id, updated_text)
+        client.update_developer_response!(app_id: apple_id, platform: platform, review_id: review_id, response_id: response_id, response: updated_text)
+      end
+
       def platforms
         platforms = []
         version_sets.each do |version_set|

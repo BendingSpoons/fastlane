@@ -425,6 +425,51 @@ module Spaceship
       all_reviews
     end
 
+    def get_reviews_at_page(app_id, platform, storefront, version_id, page = 0, sort = 'REVIEW_SORT_ORDER_MOST_RECENT')
+      per_page = 100 # apple default
+      index = page * per_page
+      rating_url = "ra/apps/#{app_id}/platforms/#{platform}/reviews?"
+      rating_url << "sort=#{sort}"
+      rating_url << "&index=#{index}"
+      rating_url << "&storefront=#{storefront}" unless storefront.empty?
+      rating_url << "&versionId=#{version_id}" unless version_id.empty?
+
+      r = request(:get, rating_url)
+      parse_response(r, 'data')['reviews']
+    end
+
+    def create_developer_response!(app_id: nil, platform: "ios", review_id: nil, response: nil)
+      raise "app_id is required" unless app_id
+      raise "review_id is required" unless review_id
+      raise "response is required" unless response
+
+      data = {
+        responseText: response,
+        reviewId: review_id
+      }
+      request(:post) do |req|
+        req.url("ra/apps/#{app_id}/platforms/#{platform}/reviews/#{review_id}/responses")
+        req.body = data.to_json
+        req.headers['Content-Type'] = 'application/json'
+      end
+    end
+
+    def update_developer_response!(app_id: nil, platform: "ios", review_id: nil, response_id: nil, response: nil)
+      raise "app_id is required" unless app_id
+      raise "review_id is required" unless review_id
+      raise "response_id is required" unless response_id
+      raise "response is required" unless response
+
+      data = {
+        responseText: response
+      }
+      request(:put) do |req|
+        req.url("ra/apps/#{app_id}/platforms/#{platform}/reviews/#{review_id}/responses/#{response_id}")
+        req.body = data.to_json
+        req.headers['Content-Type'] = 'application/json'
+      end
+    end
+
     #####################################################
     # @!group AppVersions
     #####################################################
