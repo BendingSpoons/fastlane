@@ -7,6 +7,9 @@ require 'spaceship/tunes/iap_family_list'
 require 'spaceship/tunes/iap_families'
 require 'spaceship/tunes/iap_family_details'
 require 'spaceship/tunes/iap_families'
+require 'spaceship/tunes/iap_subscription_pricing'
+require 'spaceship/tunes/iap_subscription_pricing_intro_offer_type'
+require 'spaceship/tunes/iap_subscription_pricing_intro_offer'
 require 'spaceship/tunes/iap_subscription_pricing_tier'
 
 module Spaceship

@@ -2,6 +2,7 @@ require_relative '../du/upload_file'
 require_relative 'iap_status'
 require_relative 'iap_type'
 require_relative 'tunes_base'
+require_relative 'iap_subscription_pricing'
 
 module Spaceship
   module Tunes
@@ -46,6 +47,9 @@ module Spaceship
       # as subscription pricing, intro offers, etc.
       attr_accessor :raw_pricing_data
 
+      # @return (Spaceship::Tunes::IAPSubscriptionPricing) Subscription pricing object which handle introductory pricing and subscriptions pricing
+      attr_accessor :subscription_pricing
+
       attr_mapping({
         'adamId' => :purchase_id,
         'referenceName.value' => :reference_name,
@@ -63,7 +67,30 @@ module Spaceship
         if @raw_pricing_data
           @raw_data.set(["pricingIntervals"], @raw_pricing_data["subscriptions"])
         end
+
+        if @raw_data["addOnType"] == Tunes::IAPType::RECURRING
+          raw_pricing_data = client.load_recurring_iap_pricing(app_id: application.apple_id,
+                                                               purchase_id: self.purchase_id)
+
+          @subscription_pricing = Tunes::IAPSubscriptionPricing.new(raw_pricing_data)
+
+          @raw_data.set(["pricingIntervals"], raw_pricing_data['subscriptions'])
+        end
       end
+
+      def active_versions
+        all_versions('active')
+      end
+
+      def proposed_versions
+        all_versions('proposed')
+      end
+
+      def rejected_versions
+        all_versions('rejected')
+      end
+
+      # It overrides the proposed version to the active (currently on the store) version
 
       # @return (Hash) Hash of languages
       # @example: {
@@ -74,18 +101,7 @@ module Spaceship
       #   }
       # }
       def versions
-        parsed_versions = {}
-        raw_versions = raw_data["versions"].first["details"]["value"]
-        raw_versions.each do |localized_version|
-          language = localized_version["value"]["localeCode"]
-          parsed_versions[language.to_sym] = {
-            name: localized_version["value"]["name"]["value"],
-            description: localized_version["value"]["description"]["value"],
-            id: localized_version["value"]["id"],
-            status: localized_version["value"]["status"]
-          }
-        end
-        return parsed_versions
+        active_versions.merge(proposed_versions)
       end
 
       # transforms user-set versions to iTC ones
@@ -94,19 +110,81 @@ module Spaceship
           # input that comes from iTC api
           return
         end
-        new_versions = []
+
+        new_versions = active_versions.values
+
         value.each do |language, current_version|
+          language = language.to_sym
+          is_rejected = rejected_versions.key?(language)
+          is_proposed = proposed_versions.key?(language)
+          is_active = active_versions.key?(language)
+
+          # BSP: this extra check is needed to avoid calling Apple for nothing if a product's metadata hasn't changed
+          next if is_active &&
+                  active_versions[language][:name] == current_version[:name] &&
+                  active_versions[language][:description] == current_version[:description]
+
+          # BSP: the following is necessary to keep track of the product status and id, which might be unset otherwise
+          # (since the data may not be present in the "value" collection that is passed to this method)
+          #
+          # The base status of new IAPs MUST be "proposed", if it's nil App Store Connect will ignore the metadata
+          #
+          # However, please note that if an IAP localization has already been approved in the past and we change it,
+          # Apple will return BOTH the old localization (with status "active") AND the new localization (with status
+          # "proposed"). As counterintuitive as it sounds, the change MUST be applied with status ACTIVE, NOT PROPOSED!
+          # This requires "is_active" to be processed before "is_proposed". Failing to do so results in a crash with
+          # ITC.response.error.OPERATION_FAILED.
+          status = "proposed"
+          if is_active
+            status = active_versions[language][:status]
+          elsif is_rejected
+            status = rejected_versions[language][:status]
+          elsif is_proposed
+            status = proposed_versions[language][:status]
+          end
+
+          # Note that id=nil is valid only if the product doesn't exist; setting a nil value on an existing product
+          # will result in a crash with ITC.response.error.OPERATION_FAILED.
+          # The identifier must be taken from the returned version, taking care of selecting the highest priority one
+          # as outlined above (active > proposed).
+          id = nil
+          if is_active
+            id = active_versions[language][:id]
+          elsif is_rejected
+            id = rejected_versions[language][:id]
+          elsif is_proposed
+            id = proposed_versions[language][:id]
+          end
+
           new_versions << {
-            "value" =>   {
-              "name" =>  { "value" => current_version[:name] },
-              "description" =>  { "value" => current_version[:description] },
-              "localeCode" => language.to_s,
-              "id" => current_version[:id]
-            }
+              name: current_version[:name],
+              description: current_version[:description],
+              locale_code: language.to_s,
+              status: status,
+              id: id
           }
         end
 
-        raw_data.set(["versions"], [{ reviewNotes: { value: @review_notes }, "contentHosting" => raw_data['versions'].first['contentHosting'], "details" => { "value" => new_versions }, "id" => raw_data["versions"].first["id"], "reviewScreenshot" => { "value" => review_screenshot } }])
+        new_versions = new_versions.map do |current_version|
+          {
+              "value" => {
+                  "name" => { "value" => current_version[:name] },
+                  "description" => { "value" => current_version[:description] },
+                  "localeCode" => current_version[:locale_code],
+                  "status" => current_version[:status],
+                  "id" => current_version[:id]
+              }
+          }
+        end
+
+        raw_data.set(["versions"], [{
+          "reviewNotes" => { value: @review_notes },
+          "contentHosting" => raw_data['versions'].first['contentHosting'],
+          "details" => { "value" => new_versions },
+          "id" => raw_data["versions"].first["id"],
+          "reviewScreenshot" => { "value" => review_screenshot },
+          "merch" => raw_data["versions"].first["merch"]
+        }])
       end
 
       # transforms user-set intervals to iTC ones
@@ -115,6 +193,7 @@ module Spaceship
           client.transform_to_raw_pricing_intervals(application.apple_id, self.purchase_id, value)
         raw_data.set(["pricingIntervals"], raw_pricing_intervals)
         @raw_pricing_data["subscriptions"] = raw_pricing_intervals if @raw_pricing_data
+        @subscription_pricing.raw_data.set(['subscriptions'], raw_pricing_intervals) if @raw_data["addOnType"] == Tunes::IAPType::RECURRING
       end
 
       # @return (Array) pricing intervals
@@ -135,6 +214,41 @@ module Spaceship
             end_date: interval["value"]["priceTierEndDate"],
             grandfathered: interval["value"]["grandfathered"],
             country: interval["value"]["country"]
+          }
+        end
+      end
+
+      def intro_offers=(value = [])
+        return [] unless raw_data["addOnType"] == Spaceship::Tunes::IAPType::RECURRING
+        new_intro_offers = []
+        value.each do |current_intro_offer|
+          new_intro_offers << {
+            "value" => {
+              "country" => current_intro_offer[:country],
+              "durationType" => current_intro_offer[:duration_type],
+              "startDate" => current_intro_offer[:start_date],
+              "endDate" => current_intro_offer[:end_date],
+              "numOfPeriods" => current_intro_offer[:num_of_periods],
+              "offerModeType" => current_intro_offer[:offer_mode_type],
+              "tierStem" => current_intro_offer[:tier_stem]
+            }
+          }
+        end
+        @subscription_pricing.raw_data.set(['introOffers'], new_intro_offers)
+      end
+
+      def intro_offers
+        return [] unless raw_data["addOnType"] == Spaceship::Tunes::IAPType::RECURRING
+
+        @intro_offers ||= (@subscription_pricing.raw_data["introOffers"] || []).map do |intro_offer|
+          {
+              country: intro_offer["value"]["country"],
+              duration_type: intro_offer["value"]["durationType"],
+              start_date: intro_offer["value"]["startDate"],
+              end_date: intro_offer["value"]["endDate"],
+              num_of_periods: intro_offer["value"]["numOfPeriods"],
+              offer_mode_type: intro_offer["value"]["offerModeType"],
+              tier_stem: intro_offer["value"]["tierStem"]
           }
         end
       end
@@ -171,6 +285,7 @@ module Spaceship
                       "description" => { "value" => value[:description] },
                       "name" => { "value" => value[:name] },
                       "localeCode" => language.to_s,
+                      "status" => value[:status],
                       "id" => value[:id]
                     }
           }
@@ -206,6 +321,9 @@ module Spaceship
         if raw_data["addOnType"] == Spaceship::Tunes::IAPType::RECURRING
           client.update_recurring_iap_pricing!(app_id: application.apple_id, purchase_id: self.purchase_id,
                                                pricing_intervals: raw_data["pricingIntervals"])
+
+          client.update_recurring_iap_pricing_intro_offers!(app_id: application.apple_id, purchase_id: self.purchase_id,
+                                                            intro_offers: self.subscription_pricing.raw_data["introOffers"])
         end
       end
 
@@ -229,6 +347,35 @@ module Spaceship
       end
 
       private
+
+      # @return (Hash) Hash of languages
+      # @example: {
+      #   'de-DE': {
+      #     id: nil,
+      #     locale_code: "de-DE",
+      #     name: "Name shown in AppStore",
+      #     description: "Description of the In app Purchase"
+      #     status: 'active'
+      #     publication_name: nil
+      #   }
+      # }
+      def all_versions(status = 'active')
+        parsed_versions = {}
+        raw_versions = raw_data["versions"].first["details"]["value"]
+        raw_versions.each do |localized_version|
+          next if status != localized_version["value"]["status"]
+          language = localized_version["value"]["localeCode"]
+          parsed_versions[language.to_sym] = {
+              id: localized_version["value"]["id"],
+              locale_code: localized_version["value"]["localeCode"],
+              name: localized_version["value"]["name"]["value"],
+              description: localized_version["value"]["description"]["value"],
+              status: localized_version["value"]["status"]
+          }
+        end
+
+        parsed_versions
+      end
 
       # Checks wheather an iap uses world wide or territorial pricing.
       #
