@@ -212,7 +212,8 @@ module Spaceship
       @cookie = cookie || HTTP::CookieJar.new
 
       @client = Faraday.new(self.class.hostname, options) do |c|
-        c.response(:json, content_type: /\bjson$/)
+        # BSP: Apple sometimes sets the content type of a response with errors as '*/*'
+        c.response(:json, content_type: %r{(\bjson$)|(^\*\/\*$)})
         c.response(:plist, content_type: /\bplist$/)
         c.use(:cookie_jar, jar: @cookie)
         c.use(FaradayMiddleware::RelsMiddleware)

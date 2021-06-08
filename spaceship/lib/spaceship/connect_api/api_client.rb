@@ -40,7 +40,8 @@ module Spaceship
           @current_team_id = current_team_id
 
           @client = Faraday.new(hostname, options) do |c|
-            c.response(:json, content_type: /\bjson$/)
+            # BSP: Apple sometimes sets the content type of a response with errors as '*/*'
+            c.response(:json, content_type: %r{(\bjson$)|(^\*\/\*$)})
             c.response(:plist, content_type: /\bplist$/)
             c.use(FaradayMiddleware::RelsMiddleware)
             c.use(Spaceship::StatsMiddleware)
