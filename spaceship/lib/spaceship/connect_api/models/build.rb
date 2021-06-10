@@ -111,10 +111,16 @@ module Spaceship
       # API
       #
 
-      def self.all(client: nil, app_id: nil, version: nil, build_number: nil, platform: nil, processing_states: "PROCESSING,FAILED,INVALID,VALID", includes: ESSENTIAL_INCLUDES, sort: "-uploadedDate", limit: 30)
+      # BSP note: The public endpoint for listing builds does not support build metrics! In case the value
+      # "betaBuildMetrics" is specified inside the includes argument, adjust the login mechanism accordingly!
+      # The supported query parameters and values for the public endpoint can be found here:
+      # https://developer.apple.com/documentation/appstoreconnectapi/list_builds
+      def self.all(client: nil, app_id: nil, version: nil, build_number: nil, platform: nil, processing_states: "PROCESSING,FAILED,INVALID,VALID", active_only: nil, includes: ESSENTIAL_INCLUDES, sort: "-uploadedDate", limit: 30)
         client ||= Spaceship::ConnectAPI
+        filter = { app: app_id, "preReleaseVersion.version" => version, version: build_number, processingState: processing_states }
+        filter[:expired] = false if active_only
         resps = client.get_builds(
-          filter: { app: app_id, "preReleaseVersion.version" => version, version: build_number, processingState: processing_states },
+          filter: filter,
           includes: includes,
           sort: sort,
           limit: limit

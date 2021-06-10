@@ -115,6 +115,10 @@ module Spaceship
           test_flight_request_client.post("betaAppReviewSubmissions", body)
         end
 
+        # BSP note: The public endpoint for this call does not exist! It is a private endpoint.
+        # Adjust the login procedure accordingly when calling it!
+        # The available public endpoints for beta app review submissions can be found here:
+        # https://developer.apple.com/documentation/appstoreconnectapi/prerelease_versions_and_beta_testers/beta_app_review_submissions
         def delete_beta_app_review_submission(beta_app_review_submission_id: nil)
           params = test_flight_request_client.build_params(filter: nil, includes: nil, limit: nil, sort: nil, cursor: nil)
           test_flight_request_client.delete("betaAppReviewSubmissions/#{beta_app_review_submission_id}", params)
